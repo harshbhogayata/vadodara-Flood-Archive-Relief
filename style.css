@@ -1106,20 +1106,29 @@ input[type="range"]::-moz-range-thumb {
     .sidebar-collapse-handle {
         display: flex !important;
         justify-content: center;
-        padding: 8px 0 4px;
+        align-items: center;
+        height: 24px;
+        /* Explicit height */
+        padding: 8px 0;
         cursor: pointer;
+        width: 100%;
+        z-index: 2000;
+        /* Ensure on top */
+        position: relative;
     }
 
     .sidebar-collapse-handle .handle-bar {
         width: 40px;
-        height: 4px;
-        background: rgba(255, 255, 255, 0.3);
-        border-radius: 2px;
+        height: 5px;
+        /* Thicker bar */
+        background: rgba(255, 255, 255, 0.5);
+        /* More visible */
+        border-radius: 10px;
         transition: background 0.2s;
     }
 
     .sidebar-collapse-handle:hover .handle-bar {
-        background: rgba(255, 255, 255, 0.5);
+        background: rgba(255, 255, 255, 0.8);
     }
 
     /* Collapsed State */

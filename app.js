@@ -51,12 +51,29 @@ function switchTab(tabName) {
 }
 
 // Toggle Sidebar Collapse (Mobile)
-function toggleSidebar() {
+function toggleSidebar(event) {
+    if (event) event.stopPropagation();
     const sidebar = document.getElementById('sidebar');
     if (sidebar) {
         sidebar.classList.toggle('collapsed');
     }
 }
+
+// Add click listener to sidebar to expand if collapsed
+document.addEventListener('DOMContentLoaded', () => {
+    const sidebar = document.getElementById('sidebar');
+    if (sidebar) {
+        sidebar.addEventListener('click', (e) => {
+            // If collapsed and user clicks anywhere on sidebar (except buttons), expand it
+            if (sidebar.classList.contains('collapsed')) {
+                // Don't trigger if they clicked the handle (it already toggles)
+                if (!e.target.closest('.sidebar-collapse-handle')) {
+                    sidebar.classList.remove('collapsed');
+                }
+            }
+        });
+    }
+});
 
 // Generate Zone Cards for Analysis Tab (All 50 Zones)
 function generateZoneCards() {
