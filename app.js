@@ -73,8 +73,7 @@ document.addEventListener('DOMContentLoaded', () => {
         hasMoved = false;
 
         sidebar.style.transition = 'none';
-        const fab = document.getElementById('locateBtn');
-        if (fab) fab.style.transition = 'none';
+
     }, { passive: true });
 
     document.addEventListener('touchmove', (e) => {
@@ -105,15 +104,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         sidebar.style.height = `${currentHeight}px`;
 
-        const fab = document.getElementById('locateBtn');
-        if (fab) fab.style.bottom = `${currentHeight + 20}px`;
+
     }, { passive: false });
 
     document.addEventListener('touchend', (e) => {
         // Restore transitions
         sidebar.style.transition = 'height 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
-        const fab = document.getElementById('locateBtn');
-        if (fab) fab.style.transition = 'bottom 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+
 
         if (!hasMoved) {
             toggleSidebar();
@@ -149,16 +146,16 @@ document.addEventListener('DOMContentLoaded', () => {
         if (targetState === 'collapsed') {
             sidebar.classList.add('collapsed');
             sidebar.style.height = '';
-            if (fab) fab.style.bottom = '';
+
         } else if (targetState === 'maximized') {
             sidebar.classList.remove('collapsed');
             sidebar.style.height = '90vh';
-            if (fab) fab.style.bottom = 'calc(90vh + 20px)';
+
         } else {
             // Expanded (Default)
             sidebar.classList.remove('collapsed');
             sidebar.style.height = '';
-            if (fab) fab.style.bottom = '';
+
         }
     });
 
@@ -177,8 +174,7 @@ function toggleSidebar(event) {
     if (sidebar) {
         sidebar.classList.toggle('collapsed');
         sidebar.style.height = '';
-        const fab = document.getElementById('locateBtn');
-        if (fab) fab.style.bottom = '';
+
     }
 }
 
