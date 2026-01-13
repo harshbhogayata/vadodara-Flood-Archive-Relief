@@ -105,6 +105,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }, { passive: false });
 
     document.addEventListener('touchend', (e) => {
+        // Restore transitions
         sidebar.style.transition = 'height 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
         const fab = document.getElementById('locateBtn');
         if (fab) fab.style.transition = 'bottom 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
@@ -112,24 +113,44 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!hasMoved) {
             toggleSidebar();
             return;
-        } // Only if truly dragged
+        }
 
         if (!isDragging) return;
         isDragging = false;
 
         const windowHeight = window.innerHeight;
-        const collapseThreshold = 120;
-        const maximizeThreshold = windowHeight * 0.65;
 
-        if (currentHeight < collapseThreshold) {
+        // Directional Snap Logic (Better UX)
+        const draggedUp = currentHeight > startHeight + 20; // Dragged up a bit
+        const draggedDown = currentHeight < startHeight - 20; // Dragged down a bit
+
+        let targetState = 'expanded'; // Default target
+
+        if (startHeight < 100 && draggedUp) {
+            // Was collapsed, user dragged up -> Go to Expanded
+            targetState = 'expanded';
+        } else if (currentHeight < 120) {
+            // Absolute position is very low -> Collapse
+            targetState = 'collapsed';
+        } else if (currentHeight > windowHeight * 0.65) {
+            // Absolute position is high -> Maximize
+            targetState = 'maximized';
+        } else if (draggedDown && startHeight > 200) {
+            // Was expanded, user dragged down -> Collapse
+            targetState = 'collapsed';
+        }
+
+        // Apply State
+        if (targetState === 'collapsed') {
             sidebar.classList.add('collapsed');
             sidebar.style.height = '';
             if (fab) fab.style.bottom = '';
-        } else if (currentHeight > maximizeThreshold) {
+        } else if (targetState === 'maximized') {
             sidebar.classList.remove('collapsed');
             sidebar.style.height = '90vh';
             if (fab) fab.style.bottom = 'calc(90vh + 20px)';
         } else {
+            // Expanded (Default)
             sidebar.classList.remove('collapsed');
             sidebar.style.height = '';
             if (fab) fab.style.bottom = '';
