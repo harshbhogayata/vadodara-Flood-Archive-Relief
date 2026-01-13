@@ -84,6 +84,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!isDragging) {
             if (Math.abs(deltaY) > DRAG_THRESHOLD) {
                 isDragging = true;
+                // IMPORTANT: Remove 'collapsed' class so CSS !important doesn't override JS positioning
+                if (sidebar.classList.contains('collapsed')) {
+                    sidebar.style.height = startHeight + 'px';
+                    sidebar.classList.remove('collapsed');
+                }
             } else {
                 return;
             }
