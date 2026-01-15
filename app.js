@@ -980,3 +980,30 @@ window.shareZone = shareZone;
 console.log('%cVadodara Flood Archives', 'font-size: 20px; font-weight: bold; color: #4a90e2;');
 console.log('%cZero Hallucination Policy | All data verified from ISRO/VMC sources', 'font-size: 12px; color: #a0a0a0;');
 console.log('%cBuilt for civic awareness | Open Source Initiative', 'font-size: 12px; color: #06d6a0;');
+
+// REPORT MODAL LOGIC (Live Reporting)
+function openReportModal() {
+    const modal = document.getElementById('report-modal');
+    if (modal) modal.style.display = 'flex';
+}
+
+function closeReportModal() {
+    const modal = document.getElementById('report-modal');
+    if (modal) modal.style.display = 'none';
+}
+
+// Close if clicked outside
+document.addEventListener('DOMContentLoaded', () => {
+    const reportModal = document.getElementById('report-modal');
+    if (reportModal) {
+        reportModal.addEventListener('click', (e) => {
+            if (e.target.id === 'report-modal') {
+                closeReportModal();
+            }
+        });
+    }
+});
+
+// Expose functions to global scope
+window.openReportModal = openReportModal;
+window.closeReportModal = closeReportModal;
