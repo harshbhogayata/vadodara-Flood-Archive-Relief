@@ -65,6 +65,43 @@
 
     <!-- Custom Styles -->
     <link rel="stylesheet" href="style.css">
+
+    <!-- NUCLEAR A - CACHE BUSTER SCRIPT (Force Update) -->
+    <script>
+        const CURRENT_VERSION = 'v9-hotfix';
+        const lastVersion = localStorage.getItem('app_version');
+
+        if (lastVersion !== CURRENT_VERSION) {
+            console.log(`🚀 New version detected: ${CURRENT_VERSION} (was ${lastVersion}). Nuke cache & reload.`);
+
+            // Unregister Service Workers
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations().then(function (registrations) {
+                    for (let registration of registrations) {
+                        registration.unregister();
+                        console.log('🧹 Service Worker unregistered.');
+                    }
+                });
+            }
+
+            // Clear Cache Storage
+            if ('caches' in window) {
+                caches.keys().then(function (names) {
+                    for (let name of names) {
+                        caches.delete(name);
+                        console.log('🧹 Cache deleted:', name);
+                    }
+                });
+            }
+
+            // Update version and reload
+            localStorage.setItem('app_version', CURRENT_VERSION);
+            // Wait a split second for async clear then force reload
+            setTimeout(() => {
+                window.location.reload(true);
+            }, 500);
+        }
+    </script>
 </head>
 
 <body>
