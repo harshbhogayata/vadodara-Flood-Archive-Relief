@@ -1,7 +1,7 @@
 // Vadodara Flood Archives - Service Worker
 // Provides offline functionality and intelligent caching
 
-const CACHE_VERSION = 'v1';
+const CACHE_VERSION = 'v2'; // Bumped to invalidate old cache with broken code
 const CACHE_NAME = `flood-archives-${CACHE_VERSION}`;
 const MAP_TILE_CACHE = `map-tiles-${CACHE_VERSION}`;
 const MAX_TILE_CACHE = 50; // Limit map tile cache to prevent storage bloat
@@ -11,6 +11,7 @@ const STATIC_ASSETS = [
     '/',
     '/index.html',
     '/style.css',
+    '/app.js',          // Added - main application code
     '/data.js',
     '/translations.js',
     '/social-preview.png'
