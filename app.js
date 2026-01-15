@@ -415,23 +415,6 @@ function initializeMap() {
         collapsed: true
     }).addTo(map);
 
-    // Add geocoder search control
-    const geocoder = L.Control.geocoder({
-        defaultMarkGeocode: false,
-        placeholder: 'Search location...',
-        errorMessage: 'Location not found'
-    })
-        .on('markgeocode', function (e) {
-            const bbox = e.geocode.bbox;
-            const poly = L.polygon([
-                bbox.getSouthEast(),
-                bbox.getNorthEast(),
-                bbox.getNorthWest(),
-                bbox.getSouthWest()
-            ]);
-            map.fitBounds(poly.getBounds());
-        });
-
     // Add Vishwamitri River Path (Context Layer)
     addRiverPath();
 
