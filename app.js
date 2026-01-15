@@ -885,10 +885,10 @@ function parseCSV(csv) {
 
     if (rows.length < 2) return []; // Need header + at least 1 row
 
-    // Clean headers: remove newlines, quotes, extra spaces
-    const headers = rows[0].map(h => h.replace(/[\r\n"]+/g, ' ').trim());
+    // Clean headers: remove newlines, quotes, extra spaces, and lowercase
+    const headers = rows[0].map(h => h.replace(/[\r\n"]+/g, ' ').trim().toLowerCase());
 
-    console.log('🧹 Cleaned Headers:', headers);
+    console.log('🧹 Cleaned Headers (normalized):', headers);
 
     const reports = [];
 
@@ -966,8 +966,9 @@ function parseCSVToStringArray(text) {
  * Validate report has minimum required fields
  */
 function isValidReport(report) {
-    const lat = parseFloat(report.Latitude || report.latitude || report.Lat);
-    const lng = parseFloat(report.Longitude || report.longitude || report.Lng);
+    // Keys are now lowercase
+    const lat = parseFloat(report.latitude || report.lat);
+    const lng = parseFloat(report.longitude || report.lng);
 
     return !isNaN(lat) && !isNaN(lng) &&
         lat >= -90 && lat <= 90 &&
@@ -978,7 +979,8 @@ function isValidReport(report) {
  * Check if report is admin-approved
  */
 function isApproved(report) {
-    const approvalField = report.Approved || report.approved || report.APPROVED || '';
+    // Keys are now lowercase
+    const approvalField = report.approved || '';
     return approvalField.toLowerCase() === 'true' || approvalField === '1' || approvalField === 'yes';
 }
 
@@ -986,21 +988,24 @@ function isApproved(report) {
  * Plot a community report as a purple marker
  */
 function plotCommunityMarker(report) {
-    const lat = parseFloat(report.Latitude || report.latitude || report.Lat);
-    const lng = parseFloat(report.Longitude || report.longitude || report.Lng);
-    const severity = report.Severity || report.severity || report['Water Level'] || 'Not specified';
-    const timestamp = report.Timestamp || report.timestamp || report.Date || 'Unknown';
-    const photo = report.Photo || report.photo || report['Photo URL'] || '';
-    const location = report.Location || report.location || report.Area || 'Community Report';
+    // Keys are now lowercase from the parser
+    const lat = parseFloat(report.latitude || report.lat);
+    const lng = parseFloat(report.longitude || report.lng);
+    const severity = report.severity || report['water level'] || report['current location'] || 'Not specified';
+    // ^ Note: mapped 'Current Location Water Level' -> 'current location' because header cleaning might merge them differently depending on raw CSV
+    // Actually, looking at CSV: "Submission ID,Respondent ID,Submitted at,Current Location,Water Level,Upload Photo/Video,,Approved,Lat,Lng"
+    // Cleaned: "submission id", "respondent id", "submitted at", "current location", "water level", "upload photo/video", "", "approved", "lat", "lng"
+
+    const timestamp = report.timestamp || report['submitted at'] || report.date || 'Unknown';
+    const photo = report.photo || report['upload photo/video'] || '';
+    const locationName = report.location || report['current location'] || 'Community Report';
 
     // Create purple circle marker (distinct from red/yellow historical markers)
     const marker = L.circleMarker([lat, lng], {
         radius: 8,
-        fillColor: "#a855f7", // Purple - Tailwind purple-500
-        color: "#ffffff",
+        fillColor: "#a855f7", // Purple
+        color: "#fff",
         weight: 2,
-        fillOpacity: 0.85,
-        className: 'community-marker'
     });
 
     // Create popup content
