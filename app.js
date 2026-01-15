@@ -176,7 +176,20 @@ function generateZoneCards() {
 
         // Calculate risk score using same algorithm as markers
         let score = 0;
-        const weights = { '2025': 35, '2024': 35, '2023': 2.5, '2022': 2.5, '2021': 2.5, '2020': 2.5, '2019': 20 };
+
+        // Year Weights: Recent flooding (2024-2025) weighted highest (35 each = 70% if both flooded)
+        // Historical baseline (2019) also significant (20%) as it was a major event
+        // Mid-years (2020-2023) given lower weight (2.5 each) for temporal decay
+        // Total possible if all years critical: 100 points
+        const weights = {
+            '2025': 35,  // Current year (most relevant)
+            '2024': 35,  // Last year (recent pattern)
+            '2023': 2.5, // Temporal decay begins
+            '2022': 2.5,
+            '2021': 2.5,
+            '2020': 2.5,
+            '2019': 20   // Baseline year (major flood event)
+        };
 
         const getSeverity = (status) => {
             if (!status || status.toLowerCase() === 'safe') return 0;

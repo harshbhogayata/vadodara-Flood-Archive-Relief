@@ -1107,7 +1107,8 @@ input[type="range"]::-moz-range-thumb {
     #report-btn {
         position: absolute;
         bottom: 2rem;
-        left: 2rem;
+        left: 22rem;
+        /* Adjusted from 2rem to clear map legend (380px sidebar + margin) */
         /* Opposite side of "Am I Safe" */
         background: rgba(20, 20, 20, 0.9);
         color: #ef4444;
@@ -1218,7 +1219,10 @@ input[type="range"]::-moz-range-thumb {
         #sidebar {
             /* Default State: Middle */
             height: 40vh;
+            height: 40dvh;
+            /* Modern dynamic viewport height (accounts for browser chrome) */
             max-height: 95vh;
+            max-height: 95dvh;
             /* Allow full expansion */
             transition: height 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
             /* Smooth snapping */
