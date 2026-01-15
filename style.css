@@ -1248,12 +1248,13 @@ input[type="range"]::-moz-range-thumb {
         }
 
         .fab-locate {
-            bottom: 100%;
-            /* Sits on top of the sheet */
+            position: absolute;
+            top: -65px;
+            /* Float above the sidebar edge */
             right: 1rem;
-            margin-bottom: 20px;
             padding: 0.6rem 1rem;
             font-size: 0.8rem;
+            z-index: 2001;
         }
 
         .segmented-control label {
