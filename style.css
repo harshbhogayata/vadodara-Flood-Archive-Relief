@@ -1347,6 +1347,8 @@ input[type="range"]::-moz-range-thumb {
     .community-popup .leaflet-popup-content {
         margin: 0 !important;
         width: auto !important;
+        min-width: 260px !important;
+        /* Ensure consistent width */
     }
 
     .community-popup .leaflet-popup-tip {
