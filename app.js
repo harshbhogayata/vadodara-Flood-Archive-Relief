@@ -477,13 +477,16 @@ function initializeMap() {
     const isMobile = L.Browser.mobile;
 
     map = L.map('map', {
+        // Mobile: Disable animations & fractional zoom for stability (prevents jitter)
+        // Desktop: Enable animations & fractional zoom for smoothness
         zoomAnimation: !isMobile,
         markerZoomAnimation: !isMobile,
         fadeAnimation: true,
-        // Smooth Zoom Settings
-        zoomSnap: 0.1,       // Allow fractional zoom (e.g. 12.1 instead of just 12 or 13)
-        zoomDelta: 0.2,      // Small storage steps for smoother feel
-        wheelPxPerZoomLevel: 120 // Higher = Less sensitive pinch/scroll (Dampening)
+
+        // Zoom Snapping & Sensitivity
+        zoomSnap: isMobile ? 1 : 0.25,     // Mobile: Integer steps (1) prevents micro-stutter. Desktop: Smooth (0.25)
+        zoomDelta: isMobile ? 1 : 0.25,    // Mobile: Big steps. Desktop: Small steps.
+        wheelPxPerZoomLevel: 60            // Reset to default (was 120) for standard sensitivity
     }).setView([22.3072, 73.1812], 12);
 
     // Base Layer Options
