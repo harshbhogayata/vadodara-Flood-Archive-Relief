@@ -158,6 +158,16 @@
                     </div>
                 </div>
 
+                <!-- Action Buttons: Am I Safe? & Report Flood -->
+                <div class="action-row" style="display: flex; gap: 10px; margin-bottom: 1rem;">
+                    <button id="safety-btn" class="btn-action btn-safe">
+                        <span>📍</span> Am I Safe?
+                    </button>
+                    <button id="menu-report-btn" class="btn-action btn-report">
+                        <span>📢</span> Report
+                    </button>
+                </div>
+
                 <!-- Segmented Control Toggle -->
                 <div class="segmented-control">
                     <input type="radio" name="tab" id="tab-1" checked>
@@ -260,12 +270,8 @@
                 </button>
             </div>
         </div>
-    </div>
 
-    <!-- Report Flood Button -->
-    <button id="report-btn" aria-label="Report a flood in your area">
-        <span>📢</span> Report Flood
-    </button>
+    </div>
 
     <!-- Live Report Modal -->
     <div id="report-modal" class="modal-overlay" style="display: none;">

@@ -1116,6 +1116,55 @@ input[type="range"]::-moz-range-thumb {
     }
 }
 
+/* Global Action Buttons */
+.btn-action {
+    flex: 1;
+    padding: 0.75rem 1rem;
+    border-radius: 12px;
+    font-weight: 500;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    /* Glass Style */
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(4px);
+}
+
+.btn-action:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateY(-2px);
+    border-color: rgba(255, 255, 255, 0.2);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.btn-action:active {
+    transform: translateY(0);
+}
+
+/* Specific Accent Colors */
+.btn-safe span {
+    color: #60a5fa;
+}
+
+.btn-report span {
+    color: #f87171;
+}
+
+.btn-safe:hover {
+    border-color: rgba(96, 165, 250, 0.3);
+}
+
+.btn-report:hover {
+    border-color: rgba(248, 113, 113, 0.3);
+}
+
+/* --- Mobile Breakpoint --- */
 @media (max-width: 768px) {
     .glass-sidebar {
         top: auto;
@@ -1152,180 +1201,35 @@ input[type="range"]::-moz-range-thumb {
         font-size: 0.7rem;
     }
 
-    /* REPORT BUTTON */
-    #report-btn {
-        position: absolute;
-        bottom: 2rem;
-        left: 22rem;
-        /* Adjusted from 2rem to clear map legend (380px sidebar + margin) */
-        background: rgba(20, 20, 20, 0.9);
-        color: #ef4444;
-        /* Red Text */
-        border: 1px solid #ef4444;
-        padding: 0.8rem 1.5rem;
-        border-radius: 50px;
-        font-weight: 700;
-        cursor: pointer;
-        z-index: 2002;
-        /* Ensure above mobile sidebar (2000) */
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
-        transition: all 0.2s;
+
+
+
+    /* Sidebar Dynamic States */
+    #sidebar {
+        /* Default State: Middle */
+        height: 40vh;
+        height: 40dvh;
+        max-height: 95vh;
+        max-height: 95dvh;
+        transition: height 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        z-index: 2000;
+        padding-top: 0;
     }
 
-    #report-btn:hover {
-        background: #ef4444;
-        color: white;
-        transform: translateY(-2px);
+    /* State 1: Collapsed */
+    #sidebar.sheet-collapsed {
+        height: 12vh !important;
+        overflow: visible !important;
     }
 
-    @media (max-width: 768px) {
-        #sidebar {
-            /* Default State: Middle */
-            height: 40vh;
-            height: 40dvh;
-            /* Modern dynamic viewport height (accounts for browser chrome) */
-            max-height: 95vh;
-            max-height: 95dvh;
-            /* Allow full expansion */
-            transition: height 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-            /* Smooth snapping */
-            z-index: 2000;
-            padding-top: 0;
-            /* Reset */
-        }
-
-        /* State 1: Collapsed (Only Search/Handle visible) */
-        #sidebar.sheet-collapsed {
-            height: 12vh !important;
-            overflow: visible !important;
-            /* Allow FAB to float outside */
-        }
-
-        /* State 2: Full Screen (Reading mode) */
-        #sidebar.sheet-expanded {
-            height: 90vh !important;
-        }
-
-        /* While dragging, disable smooth transition so it follows finger instantly */
-        #sidebar.is-dragging {
-            transition: none !important;
-        }
-
-        .segmented-control label {
-            font-size: 0.75rem;
-            padding: 8px 4px;
-        }
-
-        /* Mobile Report Button */
-        #report-btn {
-            bottom: 14vh !important;
-            /* Position above collapsed sheet */
-            left: 1rem;
-            padding: 0.8rem 1.2rem;
-            width: auto;
-            right: auto;
-        }
-
-        #report-btn span {
-            display: inline-block;
-            /* Keep text visible */
-        }
+    /* State 2: Expanded */
+    #sidebar.sheet-expanded {
+        height: 90vh !important;
     }
 
-    /* Sidebar Collapse Handle - Always Hidden on Desktop */
-    .sidebar-collapse-handle {
-        display: none;
-    }
-
-    /* Sidebar Content Wrapper */
-    .sidebar-content {
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
-        flex: 1;
-        overflow-y: auto;
-        /* Enable internal scrolling */
-        padding-right: 4px;
-        /* Space for scrollbar */
-    }
-
-    /* MODAL STYLES */
-    .modal-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.8);
-        backdrop-filter: blur(5px);
-        z-index: 9999;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        animation: fadeIn 0.2s ease;
-    }
-
-    .modal-content {
-        width: 90%;
-        max-width: 400px;
-        background: #111;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 16px;
-        padding: 1.5rem;
-        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
-    }
-
-    .modal-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 1rem;
-    }
-
-    .close-btn {
-        background: none;
-        border: none;
-        color: #fff;
-        font-size: 1.5rem;
-        cursor: pointer;
-        transition: color 0.2s;
-    }
-
-    .close-btn:hover {
-        color: #ef4444;
-    }
-
-    /* Iframe Loading State */
-    .modal-body iframe {
-        background: linear-gradient(90deg, rgba(40, 40, 40, 0.8) 0%, rgba(60, 60, 60, 0.8) 50%, rgba(40, 40, 40, 0.8) 100%);
-        background-size: 200% 100%;
-        animation: shimmer 1.5s infinite;
-    }
-
-    @keyframes shimmer {
-        0% {
-            background-position: 200% 0;
-        }
-
-        100% {
-            background-position: -200% 0;
-        }
-    }
-
-    /* DRAG HANDLE STYLES */
-    #drag-handle-area {
-        width: 100%;
-        height: 48px;
-        /* Increased from 24px for better touch target (Apple HIG: 44px min) */
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        cursor: grab;
-        touch-action: none;
-        /* Critical: Prevents browser scrolling while dragging */
+    /* Dragging State */
+    #sidebar.is-dragging {
+        transition: none !important;
     }
 
     .drag-pill {
@@ -1335,120 +1239,136 @@ input[type="range"]::-moz-range-thumb {
         border-radius: 10px;
     }
 
-    @media (max-width: 768px) {
-        #sidebar {
-            /* Default State: Middle */
-            height: 40vh;
-            height: 40dvh;
-            /* Modern dynamic viewport height (accounts for browser chrome) */
-            max-height: 95vh;
-            max-height: 95dvh;
-            /* Allow full expansion */
-            transition: height 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-            /* Smooth snapping */
-            z-index: 2000;
-            padding-top: 0;
-            /* Reset */
-        }
-
-        /* State 1: Collapsed (Only Search/Handle visible) */
-        #sidebar.sheet-collapsed {
-            height: 12vh !important;
-            overflow: visible !important;
-            /* Allow FAB to float outside */
-        }
-
-        /* ========================================
-   COMMUNITY POPUP STYLES (Glassmorphism)
-   ======================================== */
-        .community-popup .leaflet-popup-content-wrapper {
-            background: rgba(20, 20, 20, 0.6) !important;
-            backdrop-filter: blur(12px) !important;
-            -webkit-backdrop-filter: blur(12px) !important;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 12px !important;
-            padding: 0 !important;
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37) !important;
-            overflow: hidden;
-        }
-
-        .community-popup .leaflet-popup-content {
-            margin: 0 !important;
-            width: auto !important;
-        }
-
-        .community-popup .leaflet-popup-tip {
-            background: rgba(20, 20, 20, 0.6) !important;
-            box-shadow: none !important;
-        }
-
-        .community-popup a.leaflet-popup-close-button {
-            color: #fff !important;
-            top: 8px !important;
-            right: 8px !important;
-            font-size: 18px !important;
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 50%;
-            width: 24px !important;
-            height: 24px !important;
-            display: flex;
-            /* Center the X */
-            align-items: center;
-            justify-content: center;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .community-popup a.leaflet-popup-close-button:hover {
-            background: rgba(255, 255, 255, 0.1);
-            color: #ef4444 !important;
-        }
-
-        /* State 2: Full Screen (Reading mode) */
-        #sidebar.sheet-expanded {
-            height: 90vh !important;
-        }
-
-        /* While dragging, disable smooth transition so it follows finger instantly */
-        #sidebar.is-dragging {
-            transition: none !important;
-        }
-
-
-
-        .segmented-control label {
-            font-size: 0.75rem;
-            padding: 8px 4px;
-        }
+    #drag-handle-area {
+        width: 100%;
+        height: 48px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        cursor: grab;
+        touch-action: none;
     }
 
-    /* Sidebar Collapse Handle - Always Hidden on Desktop */
+    /* Sidebar Internals */
     .sidebar-collapse-handle {
         display: none;
     }
 
-    /* Sidebar Content Wrapper */
     .sidebar-content {
         display: flex;
         flex-direction: column;
         gap: 1rem;
         flex: 1;
         overflow-y: auto;
-        /* Enable internal scrolling */
         padding-right: 4px;
-        /* Space for scrollbar */
     }
 
+    .segmented-control label {
+        font-size: 0.75rem;
+        padding: 8px 4px;
+    }
+
+    /* REPORT BUTTON - Optimized for Mobile */
     #report-btn {
+        position: fixed;
         bottom: 14vh !important;
-        /* Positioned above bottom sheet */
-        left: 1rem;
+        /* Above collapsed sheet */
+        left: 1rem !important;
+        right: auto !important;
+        width: auto;
         padding: 0.8rem 1.2rem;
-        /* Slightly smaller */
+        background: rgba(20, 20, 20, 0.9);
+        color: #ef4444;
+        border: 1px solid #ef4444;
+        border-radius: 50px;
+        font-weight: 700;
+        z-index: 2002;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.2s;
+    }
+
+    #report-btn:hover {
+        background: #ef4444;
+        color: white;
+        transform: translateY(-2px);
     }
 
     #report-btn span {
-        display: none;
+        display: inline-block;
+        /* Keep text visible for clarity */
     }
 
-    /* Hide icon if cramped, or keep it */
+    /* Hide Report Button when Sidebar is Expanded */
+    #sidebar.sheet-expanded~#report-btn {
+        opacity: 0;
+        pointer-events: none;
+        transform: translateY(20px);
+    }
+
+    /* MODAL STYLES - Mobile Override */
+    .modal-overlay {
+        animation: fadeIn 0.2s ease;
+    }
+
+    .modal-content {
+        width: 90%;
+        max-width: 400px;
+        max-height: 85vh;
+        padding: 1.25rem;
+    }
+
+    .close-btn {
+        font-size: 1.5rem;
+    }
+
+    /* Iframe Shimmer */
+    .modal-body iframe {
+        background: linear-gradient(90deg, rgba(40, 40, 40, 0.8) 0%, rgba(60, 60, 60, 0.8) 50%, rgba(40, 40, 40, 0.8) 100%);
+        background-size: 200% 100%;
+        animation: shimmer 1.5s infinite;
+    }
+
+    /* COMMUNITY POPUP STYLES - Mobile Optimized */
+    .community-popup .leaflet-popup-content-wrapper {
+        background: rgba(20, 20, 20, 0.7) !important;
+        backdrop-filter: blur(12px) !important;
+        -webkit-backdrop-filter: blur(12px) !important;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px !important;
+        padding: 0 !important;
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37) !important;
+    }
+
+    .community-popup .leaflet-popup-content {
+        margin: 0 !important;
+        width: auto !important;
+    }
+
+    .community-popup .leaflet-popup-tip {
+        background: rgba(20, 20, 20, 0.7) !important;
+        box-shadow: none !important;
+    }
+
+    .community-popup a.leaflet-popup-close-button {
+        color: #fff !important;
+        top: 8px !important;
+        right: 8px !important;
+        font-size: 18px !important;
+        background: rgba(0, 0, 0, 0.3);
+        border-radius: 50%;
+        width: 28px !important;
+        height: 28px !important;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .community-popup a.leaflet-popup-close-button:hover {
+        background: #ef4444;
+        border-color: #ef4444;
+    }
 }

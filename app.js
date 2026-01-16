@@ -29,29 +29,122 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('localRain').addEventListener('input', updateRainValue);
     document.getElementById('runSimulation').addEventListener('click', runSimulation);
 
-    // Report Modal Controls
-    const reportBtn = document.getElementById('report-btn');
-    const reportModal = document.getElementById('report-modal');
-    const closeReportBtn = reportModal?.querySelector('.close-btn');
+    // Event Listeners for NEW Menu Buttons
+    const safetyBtn = document.getElementById('safety-btn');
+    if (safetyBtn) safetyBtn.addEventListener('click', checkUserSafety);
 
-    if (reportBtn) reportBtn.addEventListener('click', openReportModal);
-    if (closeReportBtn) closeReportBtn.addEventListener('click', closeReportModal);
+    const menuReportBtn = document.getElementById('menu-report-btn');
+    if (menuReportBtn) menuReportBtn.addEventListener('click', openReportModal);
 
     // Close modal on overlay click
+    // Close modal on overlay click
+    const reportModal = document.getElementById('report-modal');
     if (reportModal) {
         reportModal.addEventListener('click', (e) => {
             if (e.target.id === 'report-modal') closeReportModal();
         });
+
+        // Close on 'x' button
+        const closeBtn = reportModal.querySelector('.close-btn');
+        if (closeBtn) closeBtn.addEventListener('click', closeReportModal);
     }
 
-    // Language Toggle
-    const langToggle = document.getElementById('langToggle');
-    if (langToggle) langToggle.addEventListener('click', toggleLanguage);
-
-    // Community Layer Toggle
-    const communityToggle = document.getElementById('community-toggle');
-    if (communityToggle) communityToggle.addEventListener('click', toggleCommunityLayer);
+    // Old Report Logic (Cleanup if needed, but keeping for safety)
+    const reportBtn = document.getElementById('report-btn');
+    if (reportBtn) reportBtn.addEventListener('click', openReportModal);
 });
+
+// "Am I Safe?" Geolocation Logic
+function checkUserSafety() {
+    if (!navigator.geolocation) {
+        alert('Geolocation is not supported by your browser');
+        return;
+    }
+
+    const btn = document.getElementById('safety-btn');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<span>⏳</span> Locating...';
+
+    navigator.geolocation.getCurrentPosition(
+        (position) => {
+            const lat = position.coords.latitude;
+            const lng = position.coords.longitude;
+            const accuracy = position.coords.accuracy;
+
+            // 1. Fly to user
+            map.flyTo([lat, lng], 16, { duration: 1.5 });
+
+            // 2. Add User Marker
+            if (userLocationMarker) map.removeLayer(userLocationMarker);
+            userLocationMarker = L.marker([lat, lng], {
+                icon: L.divIcon({
+                    className: 'user-marker',
+                    html: '<div style="background: #3b82f6; width: 16px; height: 16px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px #3b82f6;"></div>',
+                    iconSize: [20, 20]
+                })
+            }).addTo(map);
+
+            // 3. Check Risk Proximity (Nearest Zone)
+            let nearestDist = Infinity;
+            let nearestZone = null;
+
+            floodZones.forEach(zone => {
+                const dist = map.distance([lat, lng], zone.coords); // Leaflet distance in meters
+                if (dist < nearestDist) {
+                    nearestDist = dist;
+                    nearestZone = zone;
+                }
+            });
+
+            // Convert to km
+            const distKm = (nearestDist / 1000).toFixed(2);
+
+            // 4. Determine Status
+            let statusHtml = '';
+            if (nearestDist < 500) { // Closer than 500m
+                // Get risk data
+                const ledgerData = evidenceLedger.zones[nearestZone.id];
+                // Calculate current risk if possible, else use default high
+                statusHtml = `
+                    <div style="text-align: center; min-width: 200px;">
+                        <strong style="color: #ef4444; font-size: 1.1rem;">⚠️ BE CAREFUL</strong><br>
+                        <p style="margin: 8px 0; font-size: 0.9rem;">
+                            You are <strong>${(nearestDist).toFixed(0)}m</strong> from a known flood zone:<br>
+                            <u>${ledgerData.location}</u>
+                        </p>
+                        <button onclick="shareZone('${nearestZone.id}', '${ledgerData.location}', window.location.href)" 
+                            style="margin-top: 5px; padding: 4px 8px; background: #ef4444; color: white; border: none; border-radius: 4px;">
+                            Check Zone Details
+                        </button>
+                    </div>
+                `;
+            } else {
+                statusHtml = `
+                    <div style="text-align: center; min-width: 200px;">
+                        <strong style="color: #10b981; font-size: 1.1rem;">✅ YOU SEEM SAFE</strong><br>
+                        <p style="margin: 8px 0; font-size: 0.9rem;">
+                            No verified flood archives found within 500m of your location.
+                        </p>
+                        <small style="color: #aaa;">Nearest zone: ${distKm}km away</small>
+                    </div>
+                `;
+            }
+
+            // Open Popup
+            userLocationMarker.bindPopup(statusHtml).openPopup();
+
+            // Reset Button
+            btn.innerHTML = originalText;
+        },
+        (error) => {
+            console.error(error);
+            alert('Unable to retrieve your location. Please check GPS settings.');
+            btn.innerHTML = originalText;
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+}
+
 
 // Tab Switching Function
 function switchTab(tabName) {
