@@ -84,7 +84,7 @@ body {
    ======================================== */
 .glass-header {
     position: absolute;
-    top: 1rem;
+    top: calc(1rem + env(safe-area-inset-top));
     left: 50%;
     transform: translateX(-50%);
     background: var(--glass-bg);
@@ -1176,6 +1176,8 @@ input[type="range"]::-moz-range-thumb {
         max-height: 45vh;
         border-radius: 20px 20px 0 0;
         border-bottom: none;
+        /* Safe Area for Home Indicator */
+        padding-bottom: calc(1.5rem + env(safe-area-inset-bottom));
     }
 
     .map-legend {

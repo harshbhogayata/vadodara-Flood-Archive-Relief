@@ -72,7 +72,7 @@ function checkUserSafety() {
             const accuracy = position.coords.accuracy;
 
             // 1. Fly to user
-            map.flyTo([lat, lng], 16, { duration: 1.5 });
+            map.flyTo([lat, lng], 15, { duration: 1.5 });
 
             // 2. Add User Marker
             if (userLocationMarker) map.removeLayer(userLocationMarker);
@@ -471,7 +471,20 @@ function closeAboutModal() {
 // Map Initialization
 function initializeMap() {
     // Initialize Leaflet map centered on Vadodara
-    map = L.map('map').setView([22.3072, 73.1812], 12);
+    // Initialize Leaflet map centered on Vadodara
+    // Optimization: Disable zoomAnimation ONLY on mobile to prevent popup jitter
+    // Keep it enabled on desktop for smooth feel
+    const isMobile = L.Browser.mobile;
+
+    map = L.map('map', {
+        zoomAnimation: !isMobile,
+        markerZoomAnimation: !isMobile,
+        fadeAnimation: true,
+        // Smooth Zoom Settings
+        zoomSnap: 0.1,       // Allow fractional zoom (e.g. 12.1 instead of just 12 or 13)
+        zoomDelta: 0.2,      // Small storage steps for smoother feel
+        wheelPxPerZoomLevel: 120 // Higher = Less sensitive pinch/scroll (Dampening)
+    }).setView([22.3072, 73.1812], 12);
 
     // Base Layer Options
     const darkLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
