@@ -160,15 +160,14 @@
         <div id="map"></div>
 
         <!-- Floating Glass Sidebar -->
-        <aside class="glass-panel sidebar-container" id="sidebar">
+        <aside class="glass-sidebar" id="sidebar">
 
-            <!-- Drag Handle Area (Invisible Touch Target) -->
-            <div id="drag-handle-area" aria-label="Drag to resize sidebar" role="button" tabindex="0"
-                style="height: 30px; width: 100%; position: absolute; top: 0; left: 0; z-index: 20;">
-                <!-- Visual pill handled by CSS ::before -->
+            <!-- Drag Handle Area -->
+            <div id="drag-handle-area" aria-label="Drag to resize sidebar" role="button" tabindex="0">
+                <div class="drag-pill"></div>
             </div>
 
-            <div class="sidebar-content">
+            <div class="sidebar-content" id="sidebar-container">
                 <div class="sidebar-header">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <div>

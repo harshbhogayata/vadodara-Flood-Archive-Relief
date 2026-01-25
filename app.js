@@ -594,7 +594,6 @@ function addRiverPath() {
 
     // Draw the river as thick transparent "flood plain" effect
     L.polyline(riverCoords, {
-        className: 'river-glow', // NEON GLOW EFFECT (Polish Pack)
         color: '#00BFFF',       // Deep Sky Blue
         weight: 18,             // Thick line (mimics river width)
         opacity: 0.25,          // Transparent (so markers show through)
