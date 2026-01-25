@@ -1,7 +1,7 @@
 {
-    "name": "vadodara-flood-archives",
+    "name": "vadodara-files",
     "version": "1.0.0",
-    "description": "Vadodara Flood Archives mobile app",
+    "description": "Vadodara Files mobile app",
     "main": "index.js",
     "scripts": {
         "build": "node build.js",
