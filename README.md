@@ -34,6 +34,30 @@ A built-in mode for active emergency response.
 
 ---
 
+## 📱 Android Build (Capacitor)
+
+This project uses **Capacitor** to build the Android app. No manual copying required!
+
+### 1. Requirements
+- Node.js installed
+- Android Studio installed
+- Java (JDK 17+)
+
+### 2. Build Commands
+Open your terminal and run:
+
+```powershell
+# 1. Build the web source to ./dist
+npm run build
+
+# 2. Copy web assets to Android project
+npx cap sync
+
+# 3. Open Android Studio
+npx cap open android
+```
+
+Once Android Studio opens, wait for Gradle sync to finish, then click the **Run (▶️)** button to deploy to your phone/emulator.
 
 ## Technical Details
 
