@@ -4,7 +4,7 @@
 const translations = {
     en: {
         // Header
-        appTitle: "Flood Archives",
+        appTitle: "Vadodara | Flood Archive & Relief",
         appSubtitle: "Vadodara Risk Intelligence",
 
         // Tabs
@@ -58,7 +58,7 @@ const translations = {
 
     gu: {
         // Header
-        appTitle: "પૂર આર્કાઇવ્ઝ",
+        appTitle: "વડોદરા | પૂર આર્કાઇવ અને રાહત",
         appSubtitle: "વડોદરા જોખમ માહિતી",
 
         // Tabs

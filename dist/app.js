@@ -1538,7 +1538,7 @@ function getArchiveSidebarHTML() {
         <div class="sidebar-header">
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <div>
-                    <h1 data-i18n="appTitle" id="app-title-text">Vadodara Files</h1>
+                    <h1 data-i18n="appTitle" id="app-title-text">Vadodara | Flood Archive &amp; Relief</h1>
                     <p data-i18n="appSubtitle" id="app-subtitle-text">The Flood Archive</p>
                 </div>
                 
@@ -1627,7 +1627,7 @@ function getReliefSidebarHTML() {
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <div>
                     <h1 id="app-title-text">SewaSetu</h1>
-                    <p id="app-subtitle-text">Powered by Vadodara Files</p>
+                    <p id="app-subtitle-text">Powered by Vadodara | Flood Archive &amp; Relief</p>
                 </div>
                 
                 <div style="display: flex; align-items: center; gap: 8px;">

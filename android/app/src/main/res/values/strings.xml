@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Vadodara Files</string>
-    <string name="title_activity_main">Vadodara Files</string>
+    <string name="app_name">Vadodara | Flood Archive &amp; Relief</string>
+    <string name="title_activity_main">Vadodara | Flood Archive &amp; Relief</string>
     <string name="package_name">com.vadodara.flood</string>
     <string name="custom_url_scheme">com.vadodara.flood</string>
 </resources>

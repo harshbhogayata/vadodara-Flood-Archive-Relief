@@ -1,4 +1,4 @@
-# Vadodara Files 📂
+# Vadodara | Flood Archive & Relief 📂
 *(Formerly Vadodara Flood Archives)*
 
 A verified digital archive of flood risk in Vadodara (2019-2025) and a live relief coordination system ("SewaSetu").
@@ -7,7 +7,7 @@ A verified digital archive of flood risk in Vadodara (2019-2025) and a live reli
 
 ## What is this?
 
-**1. The Archive (Vadodara Files)**
+**1. The Archive (Vadodara | Flood Archive & Relief)**
 A map of 50+ locations in Vadodara with their flood history. Each zone has a risk score based on satellite data, news reports, and VMC bulletins. 
 - **Red Zones**: Critical risk (Water > Waist deep).
 - **Yellow Zones**: Moderate risk (Waterlogging).
