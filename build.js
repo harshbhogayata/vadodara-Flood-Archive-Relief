@@ -11,7 +11,8 @@ const assets = [
     'data.js',
     'translations.js',
     'sw.js',
-    'social-preview.png'
+    'social-preview.png',
+    'manifest.json'
 ];
 
 // Clean or create dist directory

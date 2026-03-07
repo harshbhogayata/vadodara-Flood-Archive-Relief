@@ -12,5 +12,8 @@ android/captures/
 android/.idea/
 android/app/src/main/assets/public/
 
+# Build artifacts
+*.apk
+
 # Capacitor
 capacitor.config.json.timestamp

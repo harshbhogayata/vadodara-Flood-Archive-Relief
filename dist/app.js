@@ -398,81 +398,7 @@ function flyToZone(zoneId, coords) {
     }, 1000);
 }
 
-// Perform External Search (Nominatim API)
-async function performExternalSearch(query) {
-    if (!query || query.length < 3) return;
 
-    // Feedback UI
-    const searchBox = document.getElementById('searchBox');
-    const originalPlaceholder = searchBox.placeholder;
-    searchBox.placeholder = "Searching map...";
-
-    try {
-        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + ', Vadodara, Gujarat')}`);
-        const results = await response.json();
-
-        if (results && results.length > 0) {
-            const result = results[0];
-            const lat = parseFloat(result.lat);
-            const lon = parseFloat(result.lon);
-
-            // Fly to location
-            map.flyTo([lat, lon], 15);
-
-            // Check Risk Proximity
-            const nearbyRisk = checkProximityToRiskZones(lat, lon);
-
-            // Create Result Marker
-            const searchIcon = L.divIcon({
-                className: 'search-marker',
-                html: `<div style="font-size: 24px;">📍</div>`,
-                iconSize: [30, 30],
-                iconAnchor: [15, 30]
-            });
-
-            // Remove previous user marker if any to avoid clutter
-            if (userLocationMarker) map.removeLayer(userLocationMarker);
-
-            userLocationMarker = L.marker([lat, lon], { icon: searchIcon }).addTo(map);
-
-            let popupContent = '';
-            if (nearbyRisk) {
-                const distance = nearbyRisk.distance.toFixed(1);
-                popupContent = `
-                    <div style="text-align: center;">
-                        <strong>${result.name || query}</strong><br>
-                        <span style="color: #ff8c42; font-weight: bold;">⚠️ CAUTION</span><br>
-                        <div style="font-size: 0.9em; margin-top: 5px;">
-                            Close to <span style="text-decoration: underline;">${nearbyRisk.name}</span><br>
-                            (${distance} km away)<br>
-                            Risk: <strong>${nearbyRisk.risk_tier}</strong>
-                        </div>
-                    </div>
-                `;
-            } else {
-                popupContent = `
-                    <div style="text-align: center;">
-                        <strong>${result.name || query}</strong><br>
-                        <span style="color: #06d6a0; font-weight: bold;">✅ NO VERIFIED RISK</span><br>
-                        <div style="font-size: 0.9em; margin-top: 5px; color: #aaa;">
-                            This specific location is not in our known high-flood database.
-                        </div>
-                    </div>
-                `;
-            }
-
-            userLocationMarker.bindPopup(popupContent).openPopup();
-
-        } else {
-            alert('Location not found in Vadodara map data.');
-        }
-    } catch (error) {
-        console.error('Search error:', error);
-        alert('Search failed. Please check internet connection.');
-    } finally {
-        searchBox.placeholder = originalPlaceholder;
-    }
-}
 
 // Disclaimer Modal Functions
 function showDisclaimerModal() {
@@ -1185,27 +1111,7 @@ function clearCommunityMarkers() {
     communityMarkers = [];
 }
 
-/**
- * Toggle community layer visibility
- */
-function toggleCommunityLayer() {
-    communityLayerVisible = !communityLayerVisible;
 
-    communityMarkers.forEach(marker => {
-        if (communityLayerVisible) {
-            marker.addTo(map);
-        } else {
-            map.removeLayer(marker);
-        }
-    });
-
-    // Update toggle button state
-    const toggleBtn = document.getElementById('community-toggle');
-    if (toggleBtn) {
-        toggleBtn.textContent = communityLayerVisible ? '👥 Hide Community' : '👥 Show Community';
-        toggleBtn.style.opacity = communityLayerVisible ? '1' : '0.6';
-    }
-}
 
 /**
  * Auto-refresh community reports every 30 minutes (reduced from 5 to prevent rate limiting)
@@ -1219,38 +1125,7 @@ setInterval(() => {
 // ========================================
 
 
-// Search Location (Simple)
-function searchLocation(e) {
-    const query = e.target.value.toLowerCase();
-    if (query.length < 2) return;
 
-    // Find matching zone using ledger data
-    // We need to find the location_id from ledger that matches name
-    let matchedId = null;
-
-    // Search in ledger values
-    for (const [id, data] of Object.entries(evidenceLedger.zones)) {
-        if (data.location.toLowerCase().includes(query)) {
-            matchedId = id;
-            break;
-        }
-    }
-
-    if (matchedId) {
-        // Find spatial coords
-        const spatialZone = floodZones.find(z => z.id === matchedId);
-
-        if (spatialZone) {
-            map.setView(spatialZone.coords, 15);
-            // Find and open the marker popup
-            // Note: markers stored with zone: { location_id: ... }
-            const markerObj = markers.find(m => m.zone.location_id === matchedId);
-            if (markerObj) {
-                markerObj.marker.openPopup();
-            }
-        }
-    }
-}
 
 // Debounce Helper
 function debounce(func, wait) {
@@ -1424,19 +1299,17 @@ function openReportModal() {
     if (!modal) return;
 
     const iframeContainer = document.getElementById('report-iframe-container');
-    const sosContainer = document.getElementById('sos-form-container');
+    const sosIframeContainer = document.getElementById('sos-iframe-container');
     const modalTitle = document.querySelector('#report-modal h3');
 
-    // Logic specific to mode
+    // Both modes use Tally iframes — switch which one is visible
     if (typeof currentMode !== 'undefined' && currentMode === 'RELIEF') {
-        // Show SOS Form
         if (iframeContainer) iframeContainer.style.display = 'none';
-        if (sosContainer) sosContainer.style.display = 'block';
+        if (sosIframeContainer) sosIframeContainer.style.display = 'block';
         if (modalTitle) modalTitle.textContent = '🚨 Request Urgent Help';
     } else {
-        // Show Standard Report Form
         if (iframeContainer) iframeContainer.style.display = 'block';
-        if (sosContainer) sosContainer.style.display = 'none';
+        if (sosIframeContainer) sosIframeContainer.style.display = 'none';
         if (modalTitle) modalTitle.textContent = '📢 Submit Live Report';
     }
 
@@ -1482,14 +1355,12 @@ function toggleMode(targetMode) {
         sidebar.innerHTML = getArchiveSidebarHTML();
         // 2. Re-attach Sliders/Charts logic
         initArchiveListeners();
-        setAppTheme('BLUE');
     }
     else if (targetMode === 'RELIEF') {
         // 1. Inject HTML
         sidebar.innerHTML = getReliefSidebarHTML();
         // 2. Re-attach SOS Button logic
         initReliefListeners();
-        setAppTheme('RED');
     }
 
     currentMode = targetMode;
@@ -1525,10 +1396,7 @@ function updateGlobalUI(mode) {
     }
 }
 
-function setAppTheme(color) {
-    // Helper for future more complex theming
-    // Currently handled by body.classList in updateGlobalUI
-}
+
 
 // --- 2. HTML TEMPLATES (The View) ---
 
@@ -1641,8 +1509,14 @@ function getReliefSidebarHTML() {
         </div>
 
         <div class="relief-container">
-            <!-- Live Ops Badge Removed -->
-            
+
+            <!-- SOS Action Button -->
+            <div class="action-row" style="display: flex; gap: 10px; margin-bottom: 1rem;">
+                <button id="menu-report-btn" class="btn-action btn-report" style="width: 100%; background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444;">
+                    <span>🆘</span> SOS — Request Help
+                </button>
+            </div>
+
             <div class="zone-search-container" style="margin-bottom: 12px;">
                 <input type="text" id="reliefSearch" class="zone-search-input" 
                     placeholder="Search requests..." oninput="filterReliefSearch()">
@@ -1656,8 +1530,7 @@ function getReliefSidebarHTML() {
                 <div class="chip" data-filter="FOOD">🍲 Food</div>
             </div>
 
-            <!-- Action Buttons (Swap) -->
-            <!-- Action Buttons (Swap) -->
+            <!-- Action Buttons -->
             <div class="action-row-v2">
                 <button id="btn-shelters" class="btn-action btn-glass-accent">
                     <span>🏠</span> Find Shelters
@@ -1734,32 +1607,134 @@ function initReliefListeners() {
         alert("🚨 EMERGENCY CONTACTS:\n\n🚒 Fire: 101\n🚑 Ambulance: 108\n👮 Police: 100\n🌊 NDRF Control: 0265-2424888");
     });
 
-    // 4. Start Live Feed
+    // 4. Wire SOS Button
+    const sosBtn = document.getElementById('menu-report-btn');
+    if (sosBtn) sosBtn.addEventListener('click', openReportModal);
+
+    // 5. Start Live Feed
     reliefUnsubscribe = subscribeToLiveRequests();
 }
 
-function subscribeToLiveRequests() {
+/**
+ * Load SOS requests from Google Sheets (Tally → Sheets → CSV)
+ * Sheet ID: 1tLWWsCaB-AmLJwTX1JhgFTWqfZ-u04qqVmcCNaO4sfo
+ */
+async function subscribeToLiveRequests() {
     const feedContainer = document.getElementById('live-feed-list');
+    const SOS_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1tLWWsCaB-AmLJwTX1JhgFTWqfZ-u04qqVmcCNaO4sfo/export?format=csv';
 
-    // MOCK DATA SIMULATION (Replacing real Firestore for now)
-    setTimeout(() => {
-        // Mock Data with Categories
-        currentReliefMockData = [
-            { id: "1", type: "FOOD", title: "Food needed for 5 people", dist: "0.8km", time: "2m ago", lat: 22.315, lng: 73.208 },
-            { id: "2", type: "MEDS", title: "Insulin Urgent", dist: "1.2km", time: "5m ago", lat: 22.288, lng: 73.175 },
-            { id: "3", type: "RESCUE", title: "Stuck on 1st Floor", dist: "2.1km", time: "12m ago", lat: 22.305, lng: 73.181 },
-            { id: "4", type: "FOOD", title: "Water packets required", dist: "0.5km", time: "15m ago", lat: 22.290, lng: 73.190 },
-            { id: "5", type: "RESCUE", title: "Boat needed for senior citizens", dist: "1.8km", time: "20m ago", lat: 22.310, lng: 73.195 }
-        ];
+    const fetchStrategies = [
+        { name: 'Direct fetch', url: SOS_SHEET_URL },
+        { name: 'AllOrigins proxy', url: `https://api.allorigins.win/raw?url=${encodeURIComponent(SOS_SHEET_URL)}` },
+        { name: 'CORSProxy.io', url: `https://corsproxy.io/?${encodeURIComponent(SOS_SHEET_URL)}` }
+    ];
 
-        // Initial Render
-        renderFeed(currentReliefMockData);
+    for (const strategy of fetchStrategies) {
+        try {
+            console.log(`📡 SOS Feed: Trying ${strategy.name}...`);
+            const response = await fetch(strategy.url, { cache: 'no-cache', headers: strategy.headers || {} });
 
-    }, 600);
+            if (!response.ok) {
+                console.warn(`⚠️ SOS ${strategy.name} failed: HTTP ${response.status}`);
+                continue;
+            }
 
-    return function () {
-        console.log("Unsubscribed from Relief Feed");
-    };
+            const csvData = await response.text();
+            if (!csvData || csvData.length < 10) continue;
+
+            console.log(`✅ SOS Feed: Success with ${strategy.name}`);
+
+            // Parse CSV using existing parser
+            const rows = parseCSV(csvData);
+            console.log(`📋 SOS: ${rows.length} rows found`);
+
+            // Map sheet columns to feed data
+            currentReliefMockData = [];
+            rows.forEach((row, index) => {
+                // Normalize keys to lowercase
+                const r = {};
+                Object.keys(row).forEach(k => { r[k.toLowerCase().trim()] = (row[k] || '').trim(); });
+
+                // Check if approved
+                const approved = (r['approved'] || r['approve'] || '').toUpperCase();
+                if (approved !== 'TRUE') return;
+
+                const lat = parseFloat(r['latitude'] || r['lat'] || '0');
+                const lng = parseFloat(r['longitude'] || r['lng'] || '0');
+                const hasCoords = lat !== 0 && lng !== 0 && !isNaN(lat) && !isNaN(lng);
+
+                // Map Tally "What do you need?" to type codes
+                const needRaw = (r['what do you need?'] || r['what do you need'] || '').toLowerCase();
+                let type = 'RESCUE';
+                if (needRaw.includes('food') || needRaw.includes('water')) type = 'FOOD';
+                if (needRaw.includes('medical') || needRaw.includes('medicine')) type = 'MEDS';
+                if (needRaw.includes('boat') || needRaw.includes('rescue')) type = 'RESCUE';
+                if (needRaw.includes('shelter')) type = 'SHELTER';
+
+                // Format timestamp
+                const timeRaw = r['submitted at'] || r['timestamp'] || '';
+                const time = timeRaw ? formatSOSTime(timeRaw) : 'Just now';
+
+                const location = r['current location'] || r['location'] || 'Unknown';
+                const details = r['describe the situation'] || r['details'] || '';
+                const people = r['how many people?'] || r['how many people'] || '?';
+
+                const item = {
+                    id: `sos_${index}`,
+                    type: type,
+                    title: details || `${needRaw} — ${people} people`,
+                    location: location,
+                    dist: hasCoords ? 'On Map' : location,
+                    time: time,
+                    lat: hasCoords ? lat : null,
+                    lng: hasCoords ? lng : null,
+                    people: people
+                };
+
+                currentReliefMockData.push(item);
+            });
+
+            console.log(`✅ SOS Feed: ${currentReliefMockData.length} approved requests loaded`);
+
+            // Render feed & map markers
+            renderFeed(currentReliefMockData);
+            if (currentMode === 'RELIEF') refreshMapData();
+
+            return function () { console.log("Unsubscribed from SOS Feed"); };
+
+        } catch (error) {
+            console.warn(`❌ SOS ${strategy.name} error:`, error.message);
+        }
+    }
+
+    // Fallback: show empty state
+    if (feedContainer) {
+        feedContainer.innerHTML = '<div style="text-align:center; color:#888; font-size:0.8rem; padding:20px;">No SOS requests yet. Submit one using the 🆘 SOS button above.</div>';
+    }
+    currentReliefMockData = [];
+
+    return function () { };
+}
+
+/**
+ * Format SOS timestamp to relative time
+ */
+function formatSOSTime(timestamp) {
+    try {
+        const date = new Date(timestamp);
+        if (isNaN(date.getTime())) return timestamp;
+        const now = new Date();
+        const diffMs = now - date;
+        const diffMins = Math.floor(diffMs / 60000);
+        if (diffMins < 1) return 'Just now';
+        if (diffMins < 60) return `${diffMins}m ago`;
+        const diffHours = Math.floor(diffMins / 60);
+        if (diffHours < 24) return `${diffHours}h ago`;
+        const diffDays = Math.floor(diffHours / 24);
+        return `${diffDays}d ago`;
+    } catch (e) {
+        return timestamp;
+    }
 }
 
 function filterFeed(category) {
@@ -1775,10 +1750,10 @@ function renderFeed(data) {
     const feedContainer = document.getElementById('live-feed-list');
     if (!feedContainer) return;
 
-    feedContainer.innerHTML = ''; // Clear
+    feedContainer.innerHTML = '';
 
     if (data.length === 0) {
-        feedContainer.innerHTML = '<div style="text-align:center; color:#666; font-size:0.8rem; padding:20px;">No requests found in this category.</div>';
+        feedContainer.innerHTML = '<div style="text-align:center; color:#666; font-size:0.8rem; padding:20px;">No requests found.</div>';
         return;
     }
 
@@ -1788,26 +1763,32 @@ function renderFeed(data) {
 }
 
 function createSOSCard(data) {
-    let borderClass = '#ef4444';
-    if (data.type === 'FOOD') borderClass = '#f59e0b'; // Orange
-    if (data.type === 'MEDS') borderClass = '#3b82f6'; // Blue
+    let borderColor = '#ef4444';
+    if (data.type === 'FOOD') borderColor = '#f59e0b';
+    if (data.type === 'MEDS') borderColor = '#3b82f6';
+    if (data.type === 'SHELTER') borderColor = '#10b981';
 
-    // Map Type to Icon
     let icon = '🆘';
     if (data.type === 'FOOD') icon = '🍲';
     if (data.type === 'MEDS') icon = '💊';
     if (data.type === 'RESCUE') icon = '🚨';
+    if (data.type === 'SHELTER') icon = '🏠';
+
+    // Only add flyTo if we have coordinates
+    const clickAction = (data.lat && data.lng)
+        ? `onclick="map.flyTo([${data.lat}, ${data.lng}], 16)"`
+        : '';
 
     return `
-        <div class="sos-card" style="border-left-color: ${borderClass}" onclick="map.flyTo([${data.lat}, ${data.lng}], 16)">
+        <div class="sos-card" style="border-left-color: ${borderColor}" ${clickAction}>
             <div style="display:flex; justify-content:space-between;">
                 <h3>${icon} ${data.type}</h3>
                 <span style="color:#666; font-size:0.7rem">${data.time}</span>
             </div>
             <p>${data.title}</p>
             <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
-                <span style="font-size:0.75rem; color:#888;">📍 ${data.dist} away</span>
-                <button>Locate</button>
+                <span style="font-size:0.75rem; color:#888;">📍 ${data.location || data.dist}</span>
+                ${(data.lat && data.lng) ? '<button>Locate</button>' : ''}
             </div>
         </div>
     `;
@@ -1817,7 +1798,8 @@ function filterReliefSearch() {
     const term = document.getElementById('reliefSearch').value.toLowerCase();
     const filtered = currentReliefMockData.filter(item =>
         item.title.toLowerCase().includes(term) ||
-        item.type.toLowerCase().includes(term)
+        item.type.toLowerCase().includes(term) ||
+        (item.location || '').toLowerCase().includes(term)
     );
     renderFeed(filtered);
 }
@@ -1828,7 +1810,6 @@ function filterReliefSearch() {
 function refreshMapData() {
     if (!map) return;
 
-    // Clear existing
     markers.forEach(m => map.removeLayer(m.marker));
     markers = [];
     if (userLocationMarker) {
@@ -1844,11 +1825,10 @@ function refreshMapData() {
 }
 
 function addSOSMarkers() {
-    // Re-use logic synced with mockData for consistency
-    const requests = currentReliefMockData.length > 0 ? currentReliefMockData : [
-        { id: "1", type: "FOOD", title: "Food needed for 5 people", dist: "0.8km", time: "2m ago", lat: 22.315, lng: 73.208 },
-        { id: "2", type: "MEDS", title: "Insulin Urgent", dist: "1.2km", time: "5m ago", lat: 22.288, lng: 73.175 }
-    ];
+    // Only plot requests that have valid coordinates
+    const requests = currentReliefMockData.filter(r => r.lat && r.lng);
+
+    if (requests.length === 0) return;
 
     requests.forEach(req => {
         let color = '#ef4444';
@@ -1856,6 +1836,7 @@ function addSOSMarkers() {
         if (req.type === 'FOOD') { color = '#f59e0b'; iconChar = '🍲'; }
         if (req.type === 'MEDS') { color = '#3b82f6'; iconChar = '💊'; }
         if (req.type === 'RESCUE') { color = '#ef4444'; iconChar = '🚨'; }
+        if (req.type === 'SHELTER') { color = '#10b981'; iconChar = '🏠'; }
 
         const customIcon = L.divIcon({
             className: 'custom-marker',
@@ -1878,129 +1859,6 @@ function addSOSMarkers() {
 
         const marker = L.marker([req.lat, req.lng], { icon: customIcon }).addTo(map);
 
-        const popupContent = `
-            <div style="text-align: center; font-family: 'Inter', sans-serif;">
-                <div style="background: ${color}; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; display: inline-block; margin-bottom: 6px;">
-                    ${req.type} REQUEST
-                </div>
-                <div style="font-weight: 600; font-size: 0.95rem; margin-bottom: 4px;">${req.title}</div>
-            </div>
-        `;
-        marker.bindPopup(popupContent);
-        markers.push({ marker, data: req });
-    });
-}
-
-function setMode(mode) {
-    currentMode = mode;
-    console.log(`Switched to mode: ${mode}`);
-
-    // 1. Update UI Theme
-    const body = document.body;
-    const pillIcon = document.querySelector('.mode-toggle-pill .mode-icon');
-    const pillLabel = document.querySelector('.mode-toggle-pill .mode-label');
-    const appTitle = document.getElementById('app-title-text');
-    const appSubtitle = document.getElementById('app-subtitle-text');
-
-    // Button Labels
-    const reportBtn = document.getElementById('menu-report-btn');
-    const volToggle = document.getElementById('volunteer-toggle-container'); // NEW
-
-    if (mode === 'RELIEF') {
-        body.classList.add('mode-relief');
-
-        // Show Volunteer Toggle
-        if (volToggle) volToggle.style.display = 'block';
-
-        if (pillIcon) pillIcon.textContent = '🚨';
-        if (pillLabel) pillLabel.textContent = 'RELIEF';
-
-        // Update Header Text for SewaSetu context
-        if (appTitle) appTitle.textContent = 'SewaSetu';
-        if (appSubtitle) appSubtitle.textContent = 'Live Relief Operations';
-
-        // Update Report Button
-        if (reportBtn) reportBtn.innerHTML = '<span>🆘</span> SOS';
-
-    } else {
-        body.classList.remove('mode-relief');
-
-        // Hide Volunteer Toggle
-        if (volToggle) volToggle.style.display = 'none';
-
-        if (pillIcon) pillIcon.textContent = '🏛️';
-        if (pillLabel) pillLabel.textContent = 'ARCHIVE';
-
-        // Restore Default Text
-        if (appTitle) appTitle.textContent = 'Flood Archives';
-        if (appSubtitle) appSubtitle.textContent = 'Vadodara Risk Intelligence';
-
-        // Restore Report Button
-        if (reportBtn) reportBtn.innerHTML = '<span>📢</span> Report';
-    }
-
-    // 2. Refresh Map Markers
-    refreshMapData();
-}
-
-function refreshMapData() {
-    if (!map) return;
-
-    // Clear existing markers
-    markers.forEach(m => map.removeLayer(m.marker));
-    markers = [];
-
-    // Clear user location marker
-    if (userLocationMarker) {
-        map.removeLayer(userLocationMarker);
-        userLocationMarker = null;
-    }
-
-    if (currentMode === 'ARCHIVE') {
-        // Load Flood Zone Markers (Existing Logic)
-        addFloodZoneMarkers();
-    } else {
-        // Load SOS Request Markers (New Logic)
-        addSOSMarkers();
-    }
-}
-
-function addSOSMarkers() {
-    // If no SOS data yet
-    if (typeof sosRequests === 'undefined' || !sosRequests) return;
-
-    sosRequests.forEach(req => {
-        // Determine Color based on Type
-        let color = '#ef4444'; // Default Red (SOS)
-        let iconChar = '🆘';
-
-        if (req.type === 'FOOD') { color = '#f59e0b'; iconChar = '🍲'; }
-        if (req.type === 'BOAT') { color = '#3b82f6'; iconChar = '🚣'; }
-        if (req.type === 'MEDICAL') { color = '#10b981'; iconChar = '⚕️'; }
-
-        // Create Marker
-        const customIcon = L.divIcon({
-            className: 'custom-marker',
-            html: `<div style="
-                background: ${color};
-                width: 32px;
-                height: 32px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                border-radius: 50%;
-                border: 3px solid white;
-                box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-                font-size: 16px;
-                z-index: 1000;
-            ">${iconChar}</div>`,
-            iconSize: [32, 32],
-            iconAnchor: [16, 16]
-        });
-
-        const marker = L.marker([req.lat, req.lng], { icon: customIcon }).addTo(map);
-
-        // Bind Popup
         const popupContent = `
             <div style="text-align: center; font-family: 'Inter', sans-serif;">
                 <div style="background: ${color}; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; display: inline-block; margin-bottom: 6px;">
@@ -2008,19 +1866,17 @@ function addSOSMarkers() {
                 </div>
                 <div style="font-weight: 600; font-size: 0.95rem; margin-bottom: 4px;">${req.title}</div>
                 <div style="font-size: 0.8rem; color: #666;">
-                    Status: <strong>${req.status}</strong><br>
-                    <span style="color: #999;">${req.timestamp}</span>
+                    📍 ${req.location || 'Unknown'}<br>
+                    <span style="color: #999;">${req.time}</span>
                 </div>
-                <button style="margin-top: 8px; width: 100%; padding: 6px; background: #1a1a1a; color: white; border: none; border-radius: 4px; cursor: pointer;">
-                    View Details
-                </button>
             </div>
         `;
-
         marker.bindPopup(popupContent);
         markers.push({ marker, data: req });
     });
 }
+
+
 
 // generateSOSCards function follows
 

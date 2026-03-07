@@ -70,8 +70,7 @@
     <!-- Custom Styles -->
     <link rel="stylesheet" href="style.css">
 
-    <!-- NUCLEAR A - CACHE BUSTER SCRIPT (Force Update) -->
-    <!-- NUCLEAR A - CACHE BUSTER SCRIPT (Force Update) -->
+    <!-- NUCLEAR CACHE BUSTER SCRIPT (Force Update) -->
     <script>
         const CURRENT_VERSION = 'v14-vadodara-flood-archive-relief';
         const lastVersion = localStorage.getItem('app_version');
@@ -108,14 +107,6 @@
         }
     </script>
 
-    <!-- Firebase SDK (Modular) -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-        // We will expose these to window for our vanilla app to use, or Initialize inside app.js if we convert app.js to module
-        // For now, we'll keep app.js as standard script and mock the data flow as per plan,
-        // but these imports are here for future readiness.
-    </script>
 </head>
 
 <body>
@@ -343,38 +334,13 @@
                     </iframe>
                 </div>
 
-                <!-- NEW: Relief SOS Form -->
-                <div id="sos-form-container" style="display: none;">
-                    <div class="form-group">
-                        <label>What do you need?</label>
-                        <select id="sos-type" class="status-select" style="background: rgba(255,255,255,0.05);">
-                            <option value="FOOD">🍲 Food / Water</option>
-                            <option value="BOAT">🚣 Boat Rescue</option>
-                            <option value="MEDICAL">⚕️ Medical / Medicine</option>
-                            <option value="SHELTER">⛺ Shelter Request</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group" style="margin-top: 1rem;">
-                        <label>Details / Situation</label>
-                        <textarea id="sos-details"
-                            placeholder="Describe the situation (e.g., 5 people stuck on roof, diabetic patient...)"
-                            style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); padding: 10px; border-radius: 8px; color: white; min-height: 80px;"></textarea>
-                    </div>
-
-                    <div class="form-group" style="margin-top: 1rem;">
-                        <label>Contact Number</label>
-                        <input type="tel" id="sos-contact" placeholder="+91 XXXXX XXXXX"
-                            style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); padding: 10px; border-radius: 8px; color: white;">
-                    </div>
-
-                    <button id="submitRequest" class="btn-primary"
-                        style="margin-top: 1.5rem; background: #ef4444; width: 100%;">
-                        🚨 SEND SOS REQUEST
-                    </button>
-                    <p style="font-size: 0.75rem; color: #888; text-align: center; margin-top: 10px;">
-                        This will alert volunteers near your GPS location.
-                    </p>
+                <!-- SOS Report (Relief Mode) - Tally Iframe -->
+                <div id="sos-iframe-container" style="display: none;">
+                    <iframe
+                        src="https://tally.so/embed/VLlPdg?alignLeft=1&hideTitle=1&transparentBackground=1&dynamicHeight=1"
+                        width="100%" height="400" frameborder="0" marginheight="0" marginwidth="0"
+                        sandbox="allow-scripts allow-forms allow-same-origin allow-popups" title="SewaSetu SOS Request">
+                    </iframe>
                 </div>
             </div>
         </div>
@@ -441,13 +407,6 @@
         // Initialize language on page load
         document.addEventListener('DOMContentLoaded', function () {
             initLanguage();
-
-            // DEBUG: Check if disclaimerModal exists
-            const modal = document.getElementById('disclaimerModal');
-            console.log('DEBUG: disclaimerModal element:', modal);
-            if (!modal) {
-                alert('ERROR: disclaimerModal not found in DOM!');
-            }
         });
     </script>
 
