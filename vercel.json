@@ -1,4 +1,5 @@
-{
+﻿{
+    "buildCommand": "npm run build",
     "outputDirectory": "dist",
     "headers": [
         {
@@ -6,7 +7,7 @@
             "headers": [
                 {
                     "key": "Content-Security-Policy",
-                    "value": "default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com https://tally.so https://gc.zgo.at; style-src 'self' 'unsafe-inline' https://unpkg.com https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; frame-src https://tally.so; connect-src 'self' https://unpkg.com https://tally.so https://gc.zgo.at https://*.tile.openstreetmap.org https://docs.google.com https://*.basemaps.cartocdn.com https://corsproxy.io; worker-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://tally.so;"
+                    "value": "default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com https://tally.so; style-src 'self' 'unsafe-inline' https://unpkg.com https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; frame-src https://tally.so; connect-src 'self' https://unpkg.com https://docs.google.com https://*.googleusercontent.com https://*.tile.openstreetmap.org https://*.basemaps.cartocdn.com; worker-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://tally.so;"
                 },
                 {
                     "key": "X-Frame-Options",

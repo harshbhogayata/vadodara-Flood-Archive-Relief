@@ -7,6 +7,25 @@ let markers = [];
 let userLocationMarker = null;
 let currentMode = 'ARCHIVE'; // 'ARCHIVE' | 'RELIEF'
 let sheltersVisible = false;
+let mapInitialized = false;
+
+const COMMUNITY_REPORTS_URL = 'https://docs.google.com/spreadsheets/d/1dbaWwodlJAyFcPc9JI9jBH3thcnfptlCKjPkiuFQImY/export?format=csv';
+const SOS_FEED_URL = 'https://docs.google.com/spreadsheets/d/1tLWWsCaB-AmLJwTX1JhgFTWqfZ-u04qqVmcCNaO4sfo/export?format=csv';
+
+const REQUEST_PRESENTATION = Object.freeze({
+    RESCUE: { label: 'Rescue', color: '#ef4444', marker: '\u{1F6A8}' },
+    FOOD: { label: 'Food', color: '#f59e0b', marker: '\u{1F372}' },
+    MEDS: { label: 'Medical', color: '#3b82f6', marker: '\u{1F48A}' },
+    SHELTER: { label: 'Shelter', color: '#10b981', marker: '\u{1F3E0}' },
+    DEFAULT: { label: 'Urgent', color: '#ef4444', marker: '\u{1F198}' }
+});
+
+const EMERGENCY_CONTACTS = Object.freeze([
+    { label: 'Fire', tel: '101', display: '101', copyValue: '101' },
+    { label: 'Ambulance', tel: '108', display: '108', copyValue: '108' },
+    { label: 'Police', tel: '100', display: '100', copyValue: '100' },
+    { label: 'NDRF', tel: '02652424888', display: '0265-2424888', copyValue: '02652424888' }
+]);
 
 // Initialize Application
 document.addEventListener('DOMContentLoaded', function () {
@@ -82,7 +101,8 @@ function checkUserSafety() {
 
     const btn = document.getElementById('safety-btn');
     const originalText = btn.innerHTML;
-    btn.innerHTML = '<span>⏳</span> Locating...';
+    btn.innerHTML = '<span>&#9203;</span> Locating...';
+    btn.disabled = true;
 
     navigator.geolocation.getCurrentPosition(
         (position) => {
@@ -126,7 +146,7 @@ function checkUserSafety() {
                 // Calculate current risk if possible, else use default high
                 statusHtml = `
                     <div style="text-align: center; min-width: 200px;">
-                        <strong style="color: #ef4444; font-size: 1.1rem;">⚠️ BE CAREFUL</strong><br>
+                        <strong style="color: #ef4444; font-size: 1.1rem;">&#9888;&#xFE0F; BE CAREFUL</strong><br>
                         <p style="margin: 8px 0; font-size: 0.9rem;">
                             You are <strong>${(nearestDist).toFixed(0)}m</strong> from a known flood zone:<br>
                             <u>${ledgerData.location}</u>
@@ -140,7 +160,7 @@ function checkUserSafety() {
             } else {
                 statusHtml = `
                     <div style="text-align: center; min-width: 200px;">
-                        <strong style="color: #10b981; font-size: 1.1rem;">✅ YOU SEEM SAFE</strong><br>
+                        <strong style="color: #10b981; font-size: 1.1rem;">&#9989; YOU SEEM SAFE</strong><br>
                         <p style="margin: 8px 0; font-size: 0.9rem;">
                             No verified flood archives found within 500m of your location.
                         </p>
@@ -154,11 +174,13 @@ function checkUserSafety() {
 
             // Reset Button
             btn.innerHTML = originalText;
+            btn.disabled = false;
         },
         (error) => {
             console.error(error);
             alert('Unable to retrieve your location. Please check GPS settings.');
             btn.innerHTML = originalText;
+            btn.disabled = false;
         },
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
@@ -279,12 +301,6 @@ function generateZoneCards() {
 
     // Clear existing
     container.innerHTML = '';
-
-    // BRANCH: If RELIEF MODE, show SOS Cards instead
-    if (typeof currentMode !== 'undefined' && currentMode === 'RELIEF') {
-        generateSOSCards(container, countEl);
-        return;
-    }
 
     // Calculate risk for all zones and sort by score (highest first)
     const zonesWithRisk = [];
@@ -408,7 +424,7 @@ function showDisclaimerModal() {
 function acceptDisclaimer() {
     document.getElementById('disclaimerModal').classList.add('hidden');
     document.getElementById('app').classList.remove('app-hidden');
-    initializeMap();
+    ensureMapInitialized();
 }
 
 function showAboutModal() {
@@ -419,8 +435,21 @@ function closeAboutModal() {
     document.getElementById('aboutModal').classList.add('hidden');
 }
 
+function ensureMapInitialized() {
+    if (mapInitialized && map) {
+        map.invalidateSize();
+        return map;
+    }
+
+    return initializeMap();
+}
+
 // Map Initialization
 function initializeMap() {
+    if (mapInitialized && map) {
+        map.invalidateSize();
+        return map;
+    }
     // Initialize Leaflet map centered on Vadodara
     // Initialize Leaflet map centered on Vadodara
     // Optimization: Disable zoomAnimation ONLY on mobile to prevent popup jitter
@@ -439,6 +468,7 @@ function initializeMap() {
         zoomDelta: isMobile ? 1 : 0.25,    // Mobile: Big steps. Desktop: Small steps.
         wheelPxPerZoomLevel: 60            // Reset to default (was 120) for standard sensitivity
     }).setView([22.3072, 73.1812], 12);
+    mapInitialized = true;
 
     // Base Layer Options
     const darkLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
@@ -462,9 +492,9 @@ function initializeMap() {
 
     // Layer Control
     const baseMaps = {
-        "🌙 Dark Mode": darkLayer,
-        "🛰️ Satellite": satelliteLayer,
-        "🗺️ Street Map": streetLayer
+        'Night basemap': darkLayer,
+        'Satellite imagery': satelliteLayer,
+        'Street map': streetLayer
     };
 
     L.control.layers(baseMaps, null, {
@@ -652,12 +682,12 @@ function addFloodZoneMarkers() {
 // Helper function for evidence icons
 function getIcon(type) {
     const icons = {
-        'SATELLITE': '🛰️',
-        'GOVT': '👮',
-        'VIDEO': '📹',
-        'NEWS': '📰'
+        'SATELLITE': 'SAT',
+        'GOVT': 'GOV',
+        'VIDEO': 'VID',
+        'NEWS': 'SRC'
     };
-    return icons[type] || '🔗';
+    return icons[type] || 'REF';
 }
 
 // Create Popup Content for Markers (History Table Card)
@@ -726,18 +756,88 @@ function createPopupContent(zone) {
             <div style="margin-top: 10px; padding-top: 8px; border-top: 1px solid #333;">
                 <a href="${data.source_url}" target="_blank" rel="noopener noreferrer" 
                    style="color: #4a90e2; font-size: 0.8rem; display: flex; align-items: center; gap: 5px;">
-                    📰 View Verified Source
+                    View verified source
                 </a>
             </div>
 
             <div style="margin-top: 10px; padding-top: 8px; border-top: 1px solid #333;">
                 <button onclick="shareZone('${zone.location_id}', '${data.location.replace(/'/g, "\\'").replace(/"/g, "&quot;")}', '${shareUrl}')" 
                         style="width: 100%; padding: 6px 12px; background: #4a90e2; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 6px;">
-                    <span>📤</span> Share This Zone
+                    Share this zone
                 </button>
             </div>
         </div>
     `;
+}
+
+function safeText(value, fallback = '') {
+    if (value === null || value === undefined) return fallback;
+    const normalized = String(value).replace(/\s+/g, ' ').trim();
+    return normalized || fallback;
+}
+
+function safeHttpUrl(value) {
+    const candidate = safeText(value);
+    if (!candidate) return null;
+
+    try {
+        const url = new URL(candidate);
+        return url.protocol === 'https:' ? url.href : null;
+    } catch {
+        return null;
+    }
+}
+
+function safeCoords(latValue, lngValue) {
+    const lat = parseFloat(latValue);
+    const lng = parseFloat(lngValue);
+
+    if (Number.isNaN(lat) || Number.isNaN(lng)) return null;
+    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
+
+    return [lat, lng];
+}
+
+function createFeedStatusMessage(message) {
+    const el = document.createElement('div');
+    el.className = 'feed-status';
+    el.textContent = safeText(message, 'No data available.');
+    return el;
+}
+
+function renderFeedMessage(message) {
+    const feedContainer = document.getElementById('live-feed-list');
+    if (!feedContainer) return;
+    feedContainer.replaceChildren(createFeedStatusMessage(message));
+}
+
+function setCommunityFeedStatus(message, state = 'idle') {
+    const statusEl = document.getElementById('community-status');
+    if (!statusEl) return;
+    statusEl.textContent = safeText(message, 'Live community reports unavailable.');
+    statusEl.dataset.state = state;
+}
+
+function focusMapLocation(coords, zoom = 16) {
+    if (!map || !coords) return;
+    map.flyTo(coords, zoom, { duration: 1 });
+}
+
+function createPopupStat(label, value) {
+    const container = document.createElement('div');
+    container.style.cssText = 'background: rgba(255,255,255,0.05); padding: 8px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);';
+
+    const labelEl = document.createElement('div');
+    labelEl.style.cssText = 'font-size: 0.7rem; color: rgba(255,255,255,0.5); margin-bottom: 2px;';
+    labelEl.textContent = label;
+
+    const valueEl = document.createElement('div');
+    valueEl.style.cssText = 'font-size: 0.9rem; font-weight: 600; color: #e2e8f0;';
+    valueEl.textContent = safeText(value, 'Unknown');
+
+    container.appendChild(labelEl);
+    container.appendChild(valueEl);
+    return container;
 }
 
 // Note: "Am I Safe?" geolocation feature has been removed as requested
@@ -751,141 +851,51 @@ let communityLayerVisible = true;
 
 /**
  * Load and display community flood reports from Google Sheets
- * Reports are submitted via Tally form → Google Sheets → Published as CSV
+ * Reports are submitted via Tally form -> Google Sheets -> published CSV
  */
 async function loadCommunityReports() {
-    // Google Sheets CSV URL - Export format from the Tally-connected sheet
-    // Sheet ID: 1dbaWwodlJAyFcPc9JI9jBH3thcnfptlCKjPkiuFQImY
-    const RAW_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1dbaWwodlJAyFcPc9JI9jBH3thcnfptlCKjPkiuFQImY/export?format=csv';
-
-    // If URL not configured yet, skip
-    if (RAW_SHEET_URL === 'YOUR_GOOGLE_SHEET_CSV_URL') {
-        console.log('📊 Community layer not configured yet. Set SHEET_URL in loadCommunityReports()');
+    if (!mapInitialized) {
         return;
     }
 
-    // Try multiple approaches to fetch the data
-    const fetchStrategies = [
-        // Strategy 1: Direct fetch (works if CORS is enabled)
-        {
-            name: 'Direct fetch',
-            url: RAW_SHEET_URL
-        },
-        // Strategy 2: AllOrigins proxy (more reliable)
-        {
-            name: 'AllOrigins proxy',
-            url: `https://api.allorigins.win/raw?url=${encodeURIComponent(RAW_SHEET_URL)}`
-        },
-        // Strategy 3: CORS.SH proxy
-        {
-            name: 'CORS.SH proxy',
-            url: `https://proxy.cors.sh/${RAW_SHEET_URL}`,
-            headers: { 'x-cors-api-key': 'temp_demo' }
-        },
-        // Strategy 4: Original corsproxy.io
-        {
-            name: 'CORSProxy.io',
-            url: `https://corsproxy.io/?${encodeURIComponent(RAW_SHEET_URL)}`
+    setCommunityFeedStatus('Syncing live community reports...', 'loading');
+    clearCommunityMarkers();
+
+    try {
+        const response = await fetch(COMMUNITY_REPORTS_URL, { cache: 'no-store' });
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
         }
-    ];
 
-    for (const strategy of fetchStrategies) {
-        try {
-            console.log(`📡 Trying: ${strategy.name}...`);
+        const csvData = await response.text();
+        const reports = parseCSV(csvData);
+        let plottedCount = 0;
 
-            const fetchOptions = {
-                cache: 'no-cache',
-                headers: strategy.headers || {}
-            };
-
-            const response = await fetch(strategy.url, fetchOptions);
-
-            if (!response.ok) {
-                console.warn(`⚠️ ${strategy.name} failed: HTTP ${response.status}`);
-                continue; // Try next strategy
+        reports.forEach((report) => {
+            if (!isValidReport(report) || !isApproved(report)) {
+                return;
             }
 
-            const csvData = await response.text();
-
-            // Validate we got CSV data
-            if (!csvData || csvData.length < 10) {
-                console.warn(`⚠️ ${strategy.name} returned empty/invalid data`);
-                continue;
+            const marker = plotCommunityMarker(report);
+            if (marker) {
+                plottedCount++;
             }
+        });
 
-            console.log(`✅ Success with ${strategy.name}!`);
-
-            // Parse CSV data
-            const reports = parseCSV(csvData);
-            console.log('📄 Parsed headers:', Object.keys(reports[0] || {}));
-            console.log('📝 First report row (raw):', reports[0]);
-
-            // Clear existing community markers
-            clearCommunityMarkers();
-
-            // Plot approved reports
-            let plottedCount = 0;
-            let validCount = 0;
-            let approvedCount = 0;
-
-            console.log(`📋 Total rows in CSV: ${reports.length}`);
-
-            reports.forEach((report, index) => {
-                const valid = isValidReport(report);
-                const approved = isApproved(report);
-
-                if (valid) validCount++;
-                if (approved) approvedCount++;
-
-                // Debug first 3 rows in detail
-                if (index < 3) {
-                    console.log(`\n🔍 Row ${index + 1} Debug:`);
-                    console.log(`   Raw report object:`, report);
-                    console.log(`   Latitude: ${report.latitude || report.lat}`);
-                    console.log(`   Longitude: ${report.longitude || report.lng}`);
-                    console.log(`   Approved field: "${report.approved}"`);
-                    console.log(`   Valid: ${valid}, Approved: ${approved}`);
-                }
-
-                if (valid && approved) {
-                    plotCommunityMarker(report);
-                    plottedCount++;
-                    console.log(`✅ Plotted report ${plottedCount}: ${report['current location'] || 'Unknown location'}`);
-                } else if (approved && !valid) {
-                    console.warn(`⚠️ Row ${index + 1}: Approved but INVALID coordinates`);
-                    console.warn(`   Lat: ${report.latitude || report.lat}, Lng: ${report.longitude || report.lng}`);
-                } else if (valid && !approved) {
-                    console.log(`⏳ Row ${index + 1}: Valid but NOT approved`);
-                }
-            });
-
-            console.log(`\n📊 Summary:`);
-            console.log(`   Total rows: ${reports.length}`);
-            console.log(`   Valid coordinates: ${validCount}`);
-            console.log(`   Approved: ${approvedCount}`);
-            console.log(`   Plotted on map: ${plottedCount}`);
-
-            return; // Success! Exit the function
-
-        } catch (error) {
-            console.warn(`❌ ${strategy.name} error:`, error.message);
-            // Continue to next strategy
+        if (plottedCount === 0) {
+            setCommunityFeedStatus('No verified community reports right now.', 'idle');
+            return;
         }
+
+        setCommunityFeedStatus(`${plottedCount} live community reports`, 'success');
+    } catch (error) {
+        clearCommunityMarkers();
+        setCommunityFeedStatus('Live community reports unavailable.', 'error');
+        console.warn('Community reports unavailable:', error.message);
     }
-
-    // If we get here, all strategies failed
-    console.error('❌ All fetch strategies failed. Could not load community reports.');
-    console.error('💡 Make sure your Google Sheet is published to web as CSV.');
 }
 
-/**
- * Parse CSV data into report objects
- * Expected columns: Timestamp, Latitude, Longitude, Severity, Photo URL, Approved
- */
-/**
- * Parse CSV data into report objects (Robust version)
- * Handles multiline quoted fields and messy headers from Tally/Google Sheets
- */
+
 function parseCSV(csv) {
     const rows = parseCSVToStringArray(csv);
 
@@ -894,7 +904,6 @@ function parseCSV(csv) {
     // Clean headers: remove newlines, quotes, extra spaces, and lowercase
     const headers = rows[0].map(h => h.replace(/[\r\n"]+/g, ' ').trim().toLowerCase());
 
-    console.log('🧹 Cleaned Headers (normalized):', headers);
 
     const reports = [];
 
@@ -972,113 +981,128 @@ function parseCSVToStringArray(text) {
  * Validate report has minimum required fields
  */
 function isValidReport(report) {
-    // Keys are now lowercase
-    const lat = parseFloat(report.latitude || report.lat);
-    const lng = parseFloat(report.longitude || report.lng);
-
-    return !isNaN(lat) && !isNaN(lng) &&
-        lat >= -90 && lat <= 90 &&
-        lng >= -180 && lng <= 180;
+    return !!safeCoords(report.latitude || report.lat, report.longitude || report.lng);
 }
 
 /**
  * Check if report is admin-approved
  */
 function isApproved(report) {
-    // Keys are now lowercase
-    const approvalField = report.approved || '';
-    return approvalField.toLowerCase() === 'true' || approvalField === '1' || approvalField === 'yes';
+    const approvalField = safeText(report.approved || '');
+    const normalized = approvalField.toLowerCase();
+    return normalized === 'true' || normalized === '1' || normalized === 'yes';
 }
 
 /**
  * Plot a community report as a purple marker
  */
 function plotCommunityMarker(report) {
-    // Keys are now lowercase from the parser
-    const lat = parseFloat(report.latitude || report.lat);
-    const lng = parseFloat(report.longitude || report.lng);
-    const severity = report['water level'] || report.severity || 'Not specified';
-    const timestamp = report['submitted at'] || report.timestamp || report.date || 'Unknown';
-    const photo = report['upload photo/video'] || report.photo || '';
-    const locationName = report['current location'] || report.location || 'Community Report';
+    const coords = safeCoords(report.latitude || report.lat, report.longitude || report.lng);
+    if (!coords || !map) return null;
 
-    // Create purple circle marker (distinct from red/yellow historical markers)
-    const marker = L.circleMarker([lat, lng], {
+    const severity = safeText(report['water level'] || report.severity, 'Not specified');
+    const timestamp = safeText(report['submitted at'] || report.timestamp || report.date, 'Unknown');
+    const photoUrl = safeHttpUrl(report['upload photo/video'] || report.photo);
+    const locationName = safeText(report['current location'] || report.location, 'Community Report');
+
+    const marker = L.circleMarker(coords, {
         radius: 8,
-        fillColor: "#a855f7",
-        color: "#fff",
+        fillColor: '#a855f7',
+        color: '#fff',
         weight: 2,
         fillOpacity: 0.8
     });
 
-    // Create user-interface friendly glassmorphic popup
-    const popupHTML = `
-        <div style="font-family: 'Inter', system-ui, -apple-system, sans-serif; color: white;">
-            
-            <!-- Header with Glowing Accent -->
-            <div style="padding: 16px 20px 12px 20px; border-bottom: 1px solid rgba(255,255,255,0.1); position: relative;">
-                <div style="position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: #a855f7; box-shadow: 0 0 10px #a855f7;"></div>
-                <div style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1.5px; color: rgba(255,255,255,0.6); margin-bottom: 4px;">Community Report</div>
-                <div style="font-size: 1.1rem; font-weight: 700; background: linear-gradient(90deg, #fff, #e0e0e0); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">${locationName}</div>
-            </div>
+    const popupRoot = document.createElement('div');
+    popupRoot.style.cssText = "font-family: 'Inter', system-ui, -apple-system, sans-serif; color: white;";
 
-            <!-- Main Content Area -->
-            <div style="padding: 16px 20px;">
-                
-                <!-- Status & Time Grid -->
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
-                    <div style="background: rgba(255,255,255,0.05); padding: 8px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
-                        <div style="font-size: 0.7rem; color: rgba(255,255,255,0.5); margin-bottom: 2px;">Water Level</div>
-                        <div style="font-size: 0.9rem; font-weight: 600; color: #e2e8f0;">${severity}</div>
-                    </div>
-                    <div style="background: rgba(255,255,255,0.05); padding: 8px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
-                        <div style="font-size: 0.7rem; color: rgba(255,255,255,0.5); margin-bottom: 2px;">Reported</div>
-                        <div style="font-size: 0.9rem; font-weight: 600; color: #e2e8f0;">${formatTimestamp(timestamp)}</div>
-                    </div>
-                </div>
+    const header = document.createElement('div');
+    header.style.cssText = 'padding: 16px 20px 12px 20px; border-bottom: 1px solid rgba(255,255,255,0.1); position: relative;';
 
-                <!-- Evidence Photo -->
-                ${photo ? `
-                <div style="position: relative; border-radius: 12px; overflow: hidden; margin-bottom: 16px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
-                    <img src="${photo}" 
-                         style="display: block; width: 100%; height: 160px; object-fit: cover; transition: transform 0.3s;"
-                         alt="Flood evidence"
-                         loading="lazy"
-                         onerror="this.parentElement.style.display='none'">
-                    <div style="position: absolute; bottom: 0; left: 0; width: 100%; padding: 8px; background: linear-gradient(to top, rgba(0,0,0,0.8), transparent); font-size: 0.7rem; color: rgba(255,255,255,0.8);">
-                        📸 Visual Evidence
-                    </div>
-                </div>
-                ` : ''}
+    const accent = document.createElement('div');
+    accent.style.cssText = 'position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: #a855f7; box-shadow: 0 0 10px #a855f7;';
 
-                <!-- Verified Badge -->
-                <div style="display: flex; align-items: center; gap: 8px; padding: 10px; background: rgba(168, 85, 247, 0.15); border: 1px solid rgba(168, 85, 247, 0.3); border-radius: 8px;">
-                    <div style="width: 16px; height: 16px; background: #a855f7; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 8px rgba(168, 85, 247, 0.5);">
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                    </div>
-                    <div>
-                        <div style="font-size: 0.75rem; font-weight: 700; color: #d8b4fe;">Verified Submission</div>
-                        <div style="font-size: 0.65rem; color: rgba(255,255,255,0.6);">Approved by Vadodara Risk Intel</div>
-                    </div>
-                </div>
+    const eyebrow = document.createElement('div');
+    eyebrow.style.cssText = 'font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1.5px; color: rgba(255,255,255,0.6); margin-bottom: 4px;';
+    eyebrow.textContent = 'Community Report';
 
-            </div>
-        </div>
-    `;
+    const title = document.createElement('div');
+    title.style.cssText = 'font-size: 1.1rem; font-weight: 700; color: #ffffff;';
+    title.textContent = locationName;
 
-    marker.bindPopup(popupHTML, {
+    header.appendChild(accent);
+    header.appendChild(eyebrow);
+    header.appendChild(title);
+
+    const body = document.createElement('div');
+    body.style.cssText = 'padding: 16px 20px;';
+
+    const stats = document.createElement('div');
+    stats.style.cssText = 'display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;';
+    stats.appendChild(createPopupStat('Water Level', severity));
+    stats.appendChild(createPopupStat('Reported', formatTimestamp(timestamp)));
+    body.appendChild(stats);
+
+    if (photoUrl) {
+        const media = document.createElement('div');
+        media.style.cssText = 'position: relative; border-radius: 12px; overflow: hidden; margin-bottom: 16px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 4px 12px rgba(0,0,0,0.3);';
+
+        const image = document.createElement('img');
+        image.src = photoUrl;
+        image.alt = 'Flood evidence';
+        image.loading = 'lazy';
+        image.style.cssText = 'display: block; width: 100%; height: 160px; object-fit: cover;';
+        image.addEventListener('error', () => media.remove());
+
+        const caption = document.createElement('div');
+        caption.style.cssText = 'position: absolute; bottom: 0; left: 0; width: 100%; padding: 8px; background: linear-gradient(to top, rgba(0,0,0,0.8), transparent); font-size: 0.7rem; color: rgba(255,255,255,0.8);';
+        caption.textContent = 'Visual Evidence';
+
+        media.appendChild(image);
+        media.appendChild(caption);
+        body.appendChild(media);
+    }
+
+    const verified = document.createElement('div');
+    verified.style.cssText = 'display: flex; align-items: center; gap: 8px; padding: 10px; background: rgba(168, 85, 247, 0.15); border: 1px solid rgba(168, 85, 247, 0.3); border-radius: 8px;';
+
+    const verifiedDot = document.createElement('div');
+    verifiedDot.style.cssText = 'width: 16px; height: 16px; background: #a855f7; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 8px rgba(168, 85, 247, 0.5); color: white; font-size: 0.7rem; font-weight: 700;';
+    verifiedDot.textContent = 'OK';
+
+    const verifiedText = document.createElement('div');
+
+    const verifiedTitle = document.createElement('div');
+    verifiedTitle.style.cssText = 'font-size: 0.75rem; font-weight: 700; color: #d8b4fe;';
+    verifiedTitle.textContent = 'Verified Submission';
+
+    const verifiedMeta = document.createElement('div');
+    verifiedMeta.style.cssText = 'font-size: 0.65rem; color: rgba(255,255,255,0.6);';
+    verifiedMeta.textContent = 'Approved by Vadodara Risk Intel';
+
+    verifiedText.appendChild(verifiedTitle);
+    verifiedText.appendChild(verifiedMeta);
+    verified.appendChild(verifiedDot);
+    verified.appendChild(verifiedText);
+    body.appendChild(verified);
+
+    popupRoot.appendChild(header);
+    popupRoot.appendChild(body);
+
+    marker.bindPopup(popupRoot, {
         maxWidth: 320,
         className: 'community-popup'
     });
-    marker.addTo(map);
 
-    // Track marker for later removal/toggle
+    if (communityLayerVisible) {
+        marker.addTo(map);
+    }
+
     communityMarkers.push(marker);
+    return marker;
 }
 
-/**
- * Format timestamp for display
- */
+
 function formatTimestamp(timestamp) {
     try {
         const date = new Date(timestamp);
@@ -1106,7 +1130,9 @@ function formatTimestamp(timestamp) {
  */
 function clearCommunityMarkers() {
     communityMarkers.forEach(marker => {
-        map.removeLayer(marker);
+        if (map && map.hasLayer(marker)) {
+            map.removeLayer(marker);
+        }
     });
     communityMarkers = [];
 }
@@ -1117,7 +1143,9 @@ function clearCommunityMarkers() {
  * Auto-refresh community reports every 30 minutes (reduced from 5 to prevent rate limiting)
  */
 setInterval(() => {
-    loadCommunityReports();
+    if (mapInitialized) {
+        loadCommunityReports();
+    }
 }, 1800000); // 30 minutes
 
 // ========================================
@@ -1195,7 +1223,7 @@ function displayPredictionResults(predictions) {
     if (resultsHTML === '') {
         resultsHTML = `
             <div class="result-item LOW">
-                <div class="result-zone">✅ All Zones Low Risk</div>
+                <div class="result-zone">All zones currently low risk</div>
                 <div class="result-reasoning">
                     Based on current conditions, no zones show elevated flood risk.
                     Continue monitoring during heavy rainfall.
@@ -1269,12 +1297,12 @@ document.head.appendChild(style);
 
 // Share Zone Functionality (Global function for popup buttons)
 function shareZone(zoneId, zoneName, shareUrl) {
-    const shareText = `⚠️ FLOOD RISK ALERT: ${zoneName}\n\nView verified flood risk data: ${shareUrl}\n\nVadodara Flood Archives | Evidence-Based Risk Assessment`;
+    const shareText = `Flood archive alert: ${zoneName}\n\nReview verified flood history: ${shareUrl}\n\nVadodara Flood Archives | Evidence-based risk assessment`;
 
     // Try modern clipboard API first
     if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(shareUrl).then(() => {
-            alert(`✅ Link copied to clipboard!`);
+            alert('\u2705 Link copied to clipboard!');
         }).catch(() => {
             // Fallback: show the URL for manual copy
             prompt('Copy this link to share:', shareUrl);
@@ -1301,16 +1329,18 @@ function openReportModal() {
     const iframeContainer = document.getElementById('report-iframe-container');
     const sosIframeContainer = document.getElementById('sos-iframe-container');
     const modalTitle = document.querySelector('#report-modal h3');
+    const modalCopy = document.getElementById('report-modal-copy');
 
-    // Both modes use Tally iframes — switch which one is visible
     if (typeof currentMode !== 'undefined' && currentMode === 'RELIEF') {
         if (iframeContainer) iframeContainer.style.display = 'none';
         if (sosIframeContainer) sosIframeContainer.style.display = 'block';
-        if (modalTitle) modalTitle.textContent = '🚨 Request Urgent Help';
+        if (modalTitle) modalTitle.innerHTML = '&#x1F6A8; Request Urgent Help';
+        if (modalCopy) modalCopy.textContent = 'Use this SOS form to request rescue, medical support, food, or shelter.';
     } else {
         if (iframeContainer) iframeContainer.style.display = 'block';
         if (sosIframeContainer) sosIframeContainer.style.display = 'none';
-        if (modalTitle) modalTitle.textContent = '📢 Submit Live Report';
+        if (modalTitle) modalTitle.innerHTML = '&#x1F4E2; Submit Live Report';
+        if (modalCopy) modalCopy.textContent = 'Your report will be verified and added to the map.';
     }
 
     modal.style.display = 'flex';
@@ -1377,22 +1407,18 @@ function updateGlobalUI(mode) {
     const body = document.body;
     const pillIcon = document.querySelector('.mode-toggle-pill .mode-icon');
     const pillLabel = document.querySelector('.mode-toggle-pill .mode-label');
-    const appTitle = document.getElementById('app-title-text');
-    const appSubtitle = document.getElementById('app-subtitle-text');
     const reportBtn = document.getElementById('menu-report-btn');
 
     if (mode === 'RELIEF') {
         body.classList.add('mode-relief');
-        if (pillIcon) pillIcon.textContent = '🚨';
+        if (pillIcon) pillIcon.textContent = '\u{1F6A8}';
         if (pillLabel) pillLabel.textContent = 'RELIEF';
-        // Note: Title/Subtitle are now inside the specific HTML templates, 
-        // but updating here ensures global variables (if any) are synced or invalid refs ignored
-        if (reportBtn) reportBtn.innerHTML = '<span>🆘</span> SOS';
+        if (reportBtn) reportBtn.innerHTML = '<span>&#x1F198;</span> SOS &mdash; Request Help';
     } else {
         body.classList.remove('mode-relief');
-        if (pillIcon) pillIcon.textContent = '🏛️';
+        if (pillIcon) pillIcon.textContent = '\u{1F3DB}\uFE0F';
         if (pillLabel) pillLabel.textContent = 'ARCHIVE';
-        if (reportBtn) reportBtn.innerHTML = '<span>📢</span> Report';
+        if (reportBtn) reportBtn.innerHTML = '<span>&#x1F4E2;</span> Report';
     }
 }
 
@@ -1401,40 +1427,36 @@ function updateGlobalUI(mode) {
 // --- 2. HTML TEMPLATES (The View) ---
 
 function getArchiveSidebarHTML() {
-    // Returns the original Simulator/Analysis HTML
-    return `
+    return                                                 `
         <div class="sidebar-header">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
                 <div>
                     <h1 data-i18n="appTitle" id="app-title-text">Vadodara | Flood Archive &amp; Relief</h1>
                     <p data-i18n="appSubtitle" id="app-subtitle-text">The Flood Archive</p>
                 </div>
-                
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <!-- Lang Toggle Removed -->
-                    <div class="mode-toggle-pill" id="modeToggle">
-                        <span class="mode-icon">🏛️</span>
-                        <span class="mode-label">ARCHIVE</span>
-                    </div>
+
+                <div class="mode-toggle-pill" id="modeToggle">
+                    <span class="mode-icon">&#x1F3DB;&#xFE0F;</span>
+                    <span class="mode-label">ARCHIVE</span>
                 </div>
             </div>
         </div>
 
         <div class="action-row" style="display: flex; gap: 10px; margin-bottom: 1rem;">
             <button id="safety-btn" class="btn-action btn-safe">
-                <span>📍</span> Am I Safe?
+                <span>&#x1F4CD;</span> Am I Safe?
             </button>
             <button id="menu-report-btn" class="btn-action btn-report">
-                <span>📢</span> Report
+                <span>&#x1F4E2;</span> Report
             </button>
         </div>
 
         <div class="segmented-control">
             <input type="radio" name="tab" id="tab-1" checked>
-            <label for="tab-1" data-i18n="tabSimulator">⚡ Simulator</label>
+            <label for="tab-1" data-i18n="tabSimulator">&#9889; Simulator</label>
 
             <input type="radio" name="tab" id="tab-2">
-            <label for="tab-2" data-i18n="tabAnalysis">📊 Analysis</label>
+            <label for="tab-2" data-i18n="tabAnalysis">&#x1F4CA; Analysis</label>
 
             <div class="glider"></div>
         </div>
@@ -1464,9 +1486,7 @@ function getArchiveSidebarHTML() {
                 </select>
             </div>
 
-            <button id="runSimulation" class="btn-simulate">
-                ⚡ Run Forecast
-            </button>
+            <button id="runSimulation" class="btn-simulate">&#9889; Run Forecast</button>
 
             <div id="predictionResults" class="prediction-results hidden">
                 <h3>Results</h3>
@@ -1477,14 +1497,14 @@ function getArchiveSidebarHTML() {
         <div id="panel-analysis" class="tab-content">
             <div class="zone-search-container">
                 <input type="text" id="zoneSearch" class="zone-search-input"
-                    placeholder="🔍 Search zones (e.g., Vadsar)..." oninput="filterZones()">
+                    placeholder="&#x1F50D; Search zones (e.g., Vadsar)..." oninput="filterZones()">
             </div>
             <div id="zonesContainer" class="zones-container"></div>
             <div id="zoneCount" class="zone-count"></div>
         </div>
 
         <div class="sidebar-footer">
-            <a href="#" id="disclaimerLink">Disclaimer</a> · <a href="#" id="aboutBtn">About</a>
+            <a href="#" id="disclaimerLink">Disclaimer</a> &middot; <a href="#" id="aboutBtn">About</a>
         </div>
     `;
 }
@@ -1492,52 +1512,41 @@ function getArchiveSidebarHTML() {
 function getReliefSidebarHTML() {
     return `
         <div class="sidebar-header">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
                 <div>
                     <h1 id="app-title-text">SewaSetu</h1>
                     <p id="app-subtitle-text">Powered by Vadodara | Flood Archive &amp; Relief</p>
                 </div>
-                
-                <div style="display: flex; align-items: center; gap: 8px;">
-                     <!-- Lang Toggle Removed -->
-                     <div class="mode-toggle-pill" id="modeToggle">
-                        <span class="mode-icon">🚨</span>
-                        <span class="mode-label">RELIEF</span>
-                    </div>
+
+                <div class="mode-toggle-pill" id="modeToggle">
+                    <span class="mode-icon">&#x1F6A8;</span>
+                    <span class="mode-label">RELIEF</span>
                 </div>
             </div>
         </div>
 
         <div class="relief-container">
-
-            <!-- SOS Action Button -->
             <div class="action-row" style="display: flex; gap: 10px; margin-bottom: 1rem;">
                 <button id="menu-report-btn" class="btn-action btn-report" style="width: 100%; background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444;">
-                    <span>🆘</span> SOS — Request Help
+                    <span>&#x1F198;</span> SOS &mdash; Request Help
                 </button>
             </div>
 
             <div class="zone-search-container" style="margin-bottom: 12px;">
-                <input type="text" id="reliefSearch" class="zone-search-input" 
+                <input type="text" id="reliefSearch" class="zone-search-input"
                     placeholder="Search requests..." oninput="filterReliefSearch()">
             </div>
 
-            <!-- Filter Chips -->
             <div class="filter-row">
                 <div class="chip active" data-filter="ALL">All</div>
-                <div class="chip" data-filter="RESCUE">🚨 Rescue</div>
-                <div class="chip" data-filter="MEDS">💊 Medical</div>
-                <div class="chip" data-filter="FOOD">🍲 Food</div>
+                <div class="chip" data-filter="RESCUE">&#x1F6A8; Rescue</div>
+                <div class="chip" data-filter="MEDS">&#x1F48A; Medical</div>
+                <div class="chip" data-filter="FOOD">&#x1F372; Food</div>
             </div>
 
-            <!-- Action Buttons -->
             <div class="action-row-v2">
-                <button id="btn-shelters" class="btn-action btn-glass-accent">
-                    <span>🏠</span> Find Shelters
-                </button>
-                <button id="btn-contacts" class="btn-action btn-glass-danger">
-                    <span>📞</span> Emergency No.
-                </button>
+                <button id="btn-shelters" class="btn-action btn-glass-accent"><span>&#x1F3E0;</span> Find Shelters</button>
+                <button id="btn-contacts" class="btn-action btn-glass-danger"><span>&#x1F4DE;</span> Emergency No.</button>
             </div>
 
             <div class="section-title">Live Needs</div>
@@ -1546,6 +1555,10 @@ function getReliefSidebarHTML() {
                     Connecting to SewaSetu Network...
                 </div>
             </div>
+        </div>
+
+        <div class="sidebar-footer sidebar-footer--relief">
+            <a href="#" id="disclaimerLink">Disclaimer</a> &middot; <a href="#" id="aboutBtn">About</a>
         </div>
     `;
 }
@@ -1603,9 +1616,7 @@ function initReliefListeners() {
         showSheltersToggle();
     });
 
-    document.getElementById('btn-contacts').addEventListener('click', () => {
-        alert("🚨 EMERGENCY CONTACTS:\n\n🚒 Fire: 101\n🚑 Ambulance: 108\n👮 Police: 100\n🌊 NDRF Control: 0265-2424888");
-    });
+    document.getElementById('btn-contacts').addEventListener('click', openEmergencyContactsOverlay);
 
     // 4. Wire SOS Button
     const sosBtn = document.getElementById('menu-report-btn');
@@ -1616,109 +1627,80 @@ function initReliefListeners() {
 }
 
 /**
- * Load SOS requests from Google Sheets (Tally → Sheets → CSV)
+ * Load SOS requests from Google Sheets (Tally -> Sheets -> CSV)
  * Sheet ID: 1tLWWsCaB-AmLJwTX1JhgFTWqfZ-u04qqVmcCNaO4sfo
  */
 async function subscribeToLiveRequests() {
-    const feedContainer = document.getElementById('live-feed-list');
-    const SOS_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1tLWWsCaB-AmLJwTX1JhgFTWqfZ-u04qqVmcCNaO4sfo/export?format=csv';
+    renderFeedMessage('Connecting to SewaSetu Network...');
 
-    const fetchStrategies = [
-        { name: 'Direct fetch', url: SOS_SHEET_URL },
-        { name: 'AllOrigins proxy', url: `https://api.allorigins.win/raw?url=${encodeURIComponent(SOS_SHEET_URL)}` },
-        { name: 'CORSProxy.io', url: `https://corsproxy.io/?${encodeURIComponent(SOS_SHEET_URL)}` }
-    ];
+    try {
+        const response = await fetch(SOS_FEED_URL, { cache: 'no-store' });
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
 
-    for (const strategy of fetchStrategies) {
-        try {
-            console.log(`📡 SOS Feed: Trying ${strategy.name}...`);
-            const response = await fetch(strategy.url, { cache: 'no-cache', headers: strategy.headers || {} });
+        const csvData = await response.text();
+        const rows = parseCSV(csvData);
+        currentReliefMockData = [];
 
-            if (!response.ok) {
-                console.warn(`⚠️ SOS ${strategy.name} failed: HTTP ${response.status}`);
-                continue;
-            }
-
-            const csvData = await response.text();
-            if (!csvData || csvData.length < 10) continue;
-
-            console.log(`✅ SOS Feed: Success with ${strategy.name}`);
-
-            // Parse CSV using existing parser
-            const rows = parseCSV(csvData);
-            console.log(`📋 SOS: ${rows.length} rows found`);
-
-            // Map sheet columns to feed data
-            currentReliefMockData = [];
-            rows.forEach((row, index) => {
-                // Normalize keys to lowercase
-                const r = {};
-                Object.keys(row).forEach(k => { r[k.toLowerCase().trim()] = (row[k] || '').trim(); });
-
-                // Check if approved
-                const approved = (r['approved'] || r['approve'] || '').toUpperCase();
-                if (approved !== 'TRUE') return;
-
-                const lat = parseFloat(r['latitude'] || r['lat'] || '0');
-                const lng = parseFloat(r['longitude'] || r['lng'] || '0');
-                const hasCoords = lat !== 0 && lng !== 0 && !isNaN(lat) && !isNaN(lng);
-
-                // Map Tally "What do you need?" to type codes
-                const needRaw = (r['what do you need?'] || r['what do you need'] || '').toLowerCase();
-                let type = 'RESCUE';
-                if (needRaw.includes('food') || needRaw.includes('water')) type = 'FOOD';
-                if (needRaw.includes('medical') || needRaw.includes('medicine')) type = 'MEDS';
-                if (needRaw.includes('boat') || needRaw.includes('rescue')) type = 'RESCUE';
-                if (needRaw.includes('shelter')) type = 'SHELTER';
-
-                // Format timestamp
-                const timeRaw = r['submitted at'] || r['timestamp'] || '';
-                const time = timeRaw ? formatSOSTime(timeRaw) : 'Just now';
-
-                const location = r['current location'] || r['location'] || 'Unknown';
-                const details = r['describe the situation'] || r['details'] || '';
-                const people = r['how many people?'] || r['how many people'] || '?';
-
-                const item = {
-                    id: `sos_${index}`,
-                    type: type,
-                    title: details || `${needRaw} — ${people} people`,
-                    location: location,
-                    dist: hasCoords ? 'On Map' : location,
-                    time: time,
-                    lat: hasCoords ? lat : null,
-                    lng: hasCoords ? lng : null,
-                    people: people
-                };
-
-                currentReliefMockData.push(item);
+        rows.forEach((row, index) => {
+            const r = {};
+            Object.keys(row).forEach((key) => {
+                r[key.toLowerCase().trim()] = safeText(row[key]);
             });
 
-            console.log(`✅ SOS Feed: ${currentReliefMockData.length} approved requests loaded`);
+            const approvalValue = safeText(r['approved'] || r['approve']).toLowerCase();
+            if (!['true', 'yes', '1'].includes(approvalValue)) {
+                return;
+            }
 
-            // Render feed & map markers
+            const coords = safeCoords(r['latitude'] || r['lat'], r['longitude'] || r['lng']);
+            const needRaw = safeText(r['what do you need?'] || r['what do you need']).toLowerCase();
+            let type = 'RESCUE';
+
+            if (needRaw.includes('food') || needRaw.includes('water')) type = 'FOOD';
+            if (needRaw.includes('medical') || needRaw.includes('medicine')) type = 'MEDS';
+            if (needRaw.includes('boat') || needRaw.includes('rescue')) type = 'RESCUE';
+            if (needRaw.includes('shelter')) type = 'SHELTER';
+
+            const timeRaw = safeText(r['submitted at'] || r['timestamp']);
+            const time = timeRaw ? formatSOSTime(timeRaw) : 'Just now';
+            const location = safeText(r['current location'] || r['location'], 'Unknown');
+            const details = safeText(r['describe the situation'] || r['details']);
+            const people = safeText(r['how many people?'] || r['how many people'], '?');
+            const title = details || `${safeText(needRaw, 'Assistance')} request for ${people} people`;
+
+            currentReliefMockData.push({
+                id: `sos_${index}`,
+                type,
+                title,
+                location,
+                dist: coords ? 'On Map' : location,
+                time,
+                lat: coords ? coords[0] : null,
+                lng: coords ? coords[1] : null,
+                people
+            });
+        });
+
+        if (currentReliefMockData.length === 0) {
+            renderFeedMessage('No SOS requests yet. Submit one using the SOS button above.');
+        } else {
             renderFeed(currentReliefMockData);
-            if (currentMode === 'RELIEF') refreshMapData();
-
-            return function () { console.log("Unsubscribed from SOS Feed"); };
-
-        } catch (error) {
-            console.warn(`❌ SOS ${strategy.name} error:`, error.message);
         }
-    }
 
-    // Fallback: show empty state
-    if (feedContainer) {
-        feedContainer.innerHTML = '<div style="text-align:center; color:#888; font-size:0.8rem; padding:20px;">No SOS requests yet. Submit one using the 🆘 SOS button above.</div>';
+        if (currentMode === 'RELIEF') refreshMapData();
+        return function () { };
+    } catch (error) {
+        currentReliefMockData = [];
+        renderFeedMessage('Live SOS feed unavailable. Submit a fresh request from the SOS button above.');
+        if (currentMode === 'RELIEF') refreshMapData();
+        console.warn('SOS feed unavailable:', error.message);
+        return function () { };
     }
-    currentReliefMockData = [];
-
-    return function () { };
 }
 
-/**
- * Format SOS timestamp to relative time
- */
+
 function formatSOSTime(timestamp) {
     try {
         const date = new Date(timestamp);
@@ -1750,49 +1732,236 @@ function renderFeed(data) {
     const feedContainer = document.getElementById('live-feed-list');
     if (!feedContainer) return;
 
-    feedContainer.innerHTML = '';
+    feedContainer.replaceChildren();
 
     if (data.length === 0) {
-        feedContainer.innerHTML = '<div style="text-align:center; color:#666; font-size:0.8rem; padding:20px;">No requests found.</div>';
+        feedContainer.appendChild(createFeedStatusMessage('No requests found.'));
         return;
     }
 
     data.forEach(item => {
-        feedContainer.innerHTML += createSOSCard(item);
+        feedContainer.appendChild(createSOSCard(item));
     });
 }
 
-function createSOSCard(data) {
-    let borderColor = '#ef4444';
-    if (data.type === 'FOOD') borderColor = '#f59e0b';
-    if (data.type === 'MEDS') borderColor = '#3b82f6';
-    if (data.type === 'SHELTER') borderColor = '#10b981';
+function getRequestPresentation(type) {
+    const normalized = safeText(type, 'REQUEST').toUpperCase();
+    return REQUEST_PRESENTATION[normalized] || REQUEST_PRESENTATION.DEFAULT;
+}
 
-    let icon = '🆘';
-    if (data.type === 'FOOD') icon = '🍲';
-    if (data.type === 'MEDS') icon = '💊';
-    if (data.type === 'RESCUE') icon = '🚨';
-    if (data.type === 'SHELTER') icon = '🏠';
+function formatRequestType(type) {
+    return getRequestPresentation(type).label;
+}
 
-    // Only add flyTo if we have coordinates
-    const clickAction = (data.lat && data.lng)
-        ? `onclick="map.flyTo([${data.lat}, ${data.lng}], 16)"`
-        : '';
+function setButtonContent(button, title, subtitle) {
+    if (!button) return;
 
-    return `
-        <div class="sos-card" style="border-left-color: ${borderColor}" ${clickAction}>
-            <div style="display:flex; justify-content:space-between;">
-                <h3>${icon} ${data.type}</h3>
-                <span style="color:#666; font-size:0.7rem">${data.time}</span>
+    button.textContent = '';
+
+    const strong = document.createElement('strong');
+    strong.textContent = title;
+
+    const small = document.createElement('small');
+    small.textContent = subtitle;
+
+    button.appendChild(strong);
+    button.appendChild(small);
+}
+
+function copyTextValue(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        return navigator.clipboard.writeText(text);
+    }
+
+    return new Promise((resolve, reject) => {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.setAttribute('readonly', 'readonly');
+        textarea.style.position = 'absolute';
+        textarea.style.left = '-9999px';
+        document.body.appendChild(textarea);
+        textarea.select();
+
+        try {
+            const copied = document.execCommand('copy');
+            textarea.remove();
+            if (copied) {
+                resolve();
+                return;
+            }
+        } catch (error) {
+            textarea.remove();
+            reject(error);
+            return;
+        }
+
+        textarea.remove();
+        reject(new Error('Copy failed'));
+    });
+}
+
+function createEmergencyContactRow(contact) {
+    const row = document.createElement('div');
+    row.className = 'contact-row';
+
+    const link = document.createElement('a');
+    link.className = 'contact-link';
+    link.href = 'tel:' + contact.tel;
+
+    const label = document.createElement('span');
+    label.textContent = contact.label;
+
+    const number = document.createElement('strong');
+    number.textContent = contact.display;
+
+    link.appendChild(label);
+    link.appendChild(number);
+
+    const copyButton = document.createElement('button');
+    copyButton.type = 'button';
+    copyButton.className = 'contact-copy';
+    copyButton.textContent = 'Copy';
+    copyButton.setAttribute('aria-label', 'Copy ' + contact.label + ' number');
+    copyButton.addEventListener('click', async () => {
+        try {
+            await copyTextValue(contact.copyValue);
+            copyButton.textContent = 'Copied';
+            window.setTimeout(() => {
+                copyButton.textContent = 'Copy';
+            }, 1200);
+        } catch (error) {
+            copyButton.textContent = 'Retry';
+            window.setTimeout(() => {
+                copyButton.textContent = 'Copy';
+            }, 1400);
+        }
+    });
+
+    row.appendChild(link);
+    row.appendChild(copyButton);
+    return row;
+}
+
+function openEmergencyContactsOverlay() {
+    const existingOverlay = document.getElementById('emergency-overlay');
+    if (existingOverlay) existingOverlay.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'emergency-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;z-index:10000;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);';
+    overlay.innerHTML = `
+        <div style="background:rgba(30,30,30,0.95);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:1.5rem;max-width:320px;width:90%;font-family:'Inter',sans-serif;box-shadow:0 8px 32px rgba(0,0,0,0.5);">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;padding-bottom:0.75rem;border-bottom:1px solid rgba(255,255,255,0.1);">
+                <h3 style="color:white;margin:0;font-size:1rem;font-weight:700;">&#x1F6A8; Emergency Contacts</h3>
+                <button type="button" data-close-overlay style="background:none;border:none;color:#9ca3af;font-size:1.5rem;cursor:pointer;padding:0;line-height:1;">&times;</button>
             </div>
-            <p>${data.title}</p>
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
-                <span style="font-size:0.75rem; color:#888;">📍 ${data.location || data.dist}</span>
-                ${(data.lat && data.lng) ? '<button>Locate</button>' : ''}
+            <div style="display:flex;flex-direction:column;gap:8px;">
+                <div style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:10px 12px;">
+                    <a href="tel:101" style="flex:1;color:#d1d5db;text-decoration:none;font-size:0.9rem;">&#x1F692; Fire &mdash; <strong style="color:white;">101</strong></a>
+                    <button type="button" data-copy-value="101" style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.1);color:#9ca3af;padding:4px 8px;border-radius:6px;cursor:pointer;font-size:0.75rem;">&#x1F4CB;</button>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:10px 12px;">
+                    <a href="tel:108" style="flex:1;color:#d1d5db;text-decoration:none;font-size:0.9rem;">&#x1F691; Ambulance &mdash; <strong style="color:white;">108</strong></a>
+                    <button type="button" data-copy-value="108" style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.1);color:#9ca3af;padding:4px 8px;border-radius:6px;cursor:pointer;font-size:0.75rem;">&#x1F4CB;</button>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:10px 12px;">
+                    <a href="tel:100" style="flex:1;color:#d1d5db;text-decoration:none;font-size:0.9rem;">&#x1F46E; Police &mdash; <strong style="color:white;">100</strong></a>
+                    <button type="button" data-copy-value="100" style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.1);color:#9ca3af;padding:4px 8px;border-radius:6px;cursor:pointer;font-size:0.75rem;">&#x1F4CB;</button>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:10px 12px;">
+                    <a href="tel:02652424888" style="flex:1;color:#d1d5db;text-decoration:none;font-size:0.9rem;">&#x1F30A; NDRF &mdash; <strong style="color:white;">0265-2424888</strong></a>
+                    <button type="button" data-copy-value="02652424888" style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.1);color:#9ca3af;padding:4px 8px;border-radius:6px;cursor:pointer;font-size:0.75rem;">&#x1F4CB;</button>
+                </div>
             </div>
         </div>
     `;
+
+    overlay.addEventListener('click', (event) => {
+        if (event.target === overlay || event.target.closest('[data-close-overlay]')) {
+            overlay.remove();
+        }
+    });
+
+    overlay.querySelectorAll('[data-copy-value]').forEach((button) => {
+        button.addEventListener('click', async (event) => {
+            event.stopPropagation();
+            const original = button.innerHTML;
+            try {
+                await copyTextValue(button.getAttribute('data-copy-value') || '');
+                button.innerHTML = '&#10003;';
+            } catch (error) {
+                button.innerHTML = 'Retry';
+            }
+            window.setTimeout(() => {
+                button.innerHTML = original;
+            }, 1000);
+        });
+    });
+
+    document.body.appendChild(overlay);
 }
+
+function createSOSCard(data) {
+    const presentation = getRequestPresentation(data.type);
+    const coords = safeCoords(data.lat, data.lng);
+    const card = document.createElement('div');
+    card.className = 'sos-card';
+    card.style.borderLeftColor = presentation.color;
+
+    const header = document.createElement('div');
+    header.style.cssText = 'display:flex; justify-content:space-between; gap:12px; align-items:flex-start;';
+
+    const title = document.createElement('h3');
+    title.textContent = presentation.marker + ' ' + presentation.label;
+
+    const time = document.createElement('span');
+    time.style.cssText = 'color:#96a3b5; font-size:0.72rem; white-space:nowrap;';
+    time.textContent = safeText(data.time, 'Now');
+
+    header.appendChild(title);
+    header.appendChild(time);
+
+    const details = document.createElement('p');
+    details.textContent = safeText(data.title, 'Assistance requested');
+
+    const footer = document.createElement('div');
+    footer.style.cssText = 'display:flex; justify-content:space-between; align-items:center; margin-top:8px; gap:8px;';
+
+    const location = document.createElement('span');
+    location.style.cssText = 'font-size:0.75rem; color:#96a3b5;';
+    location.textContent = '\u{1F4CD} ' + safeText(data.location || data.dist, 'Location unavailable');
+    footer.appendChild(location);
+
+    if (coords) {
+        const focusCard = () => focusMapLocation(coords);
+
+        card.classList.add('is-clickable');
+        card.tabIndex = 0;
+        card.setAttribute('role', 'button');
+        card.addEventListener('click', focusCard);
+        card.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                focusCard();
+            }
+        });
+
+        const locateButton = document.createElement('button');
+        locateButton.type = 'button';
+        locateButton.textContent = 'Locate';
+        locateButton.addEventListener('click', (event) => {
+            event.stopPropagation();
+            focusCard();
+        });
+        footer.appendChild(locateButton);
+    }
+
+    card.appendChild(header);
+    card.appendChild(details);
+    card.appendChild(footer);
+    return card;
+}
+
 
 function filterReliefSearch() {
     const term = document.getElementById('reliefSearch').value.toLowerCase();
@@ -1825,23 +1994,20 @@ function refreshMapData() {
 }
 
 function addSOSMarkers() {
-    // Only plot requests that have valid coordinates
-    const requests = currentReliefMockData.filter(r => r.lat && r.lng);
+    const requests = currentReliefMockData.filter(r => safeCoords(r.lat, r.lng));
 
     if (requests.length === 0) return;
 
     requests.forEach(req => {
-        let color = '#ef4444';
-        let iconChar = '🆘';
-        if (req.type === 'FOOD') { color = '#f59e0b'; iconChar = '🍲'; }
-        if (req.type === 'MEDS') { color = '#3b82f6'; iconChar = '💊'; }
-        if (req.type === 'RESCUE') { color = '#ef4444'; iconChar = '🚨'; }
-        if (req.type === 'SHELTER') { color = '#10b981'; iconChar = '🏠'; }
+        const coords = safeCoords(req.lat, req.lng);
+        if (!coords) return;
+
+        const presentation = getRequestPresentation(req.type);
 
         const customIcon = L.divIcon({
             className: 'custom-marker',
             html: `<div style="
-                background: ${color};
+                background: ${presentation.color};
                 width: 32px;
                 height: 32px;
                 display: flex;
@@ -1850,86 +2016,43 @@ function addSOSMarkers() {
                 border-radius: 50%;
                 border: 3px solid white;
                 box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-                font-size: 16px;
+                font-size: 13px;
+                font-weight: 700;
+                letter-spacing: 0.04em;
                 z-index: 1000;
-            ">${iconChar}</div>`,
+            ">${presentation.marker}</div>`,
             iconSize: [32, 32],
             iconAnchor: [16, 16]
         });
 
-        const marker = L.marker([req.lat, req.lng], { icon: customIcon }).addTo(map);
+        const marker = L.marker(coords, { icon: customIcon }).addTo(map);
 
-        const popupContent = `
-            <div style="text-align: center; font-family: 'Inter', sans-serif;">
-                <div style="background: ${color}; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; display: inline-block; margin-bottom: 6px;">
-                    ${req.type} REQUEST
-                </div>
-                <div style="font-weight: 600; font-size: 0.95rem; margin-bottom: 4px;">${req.title}</div>
-                <div style="font-size: 0.8rem; color: #666;">
-                    📍 ${req.location || 'Unknown'}<br>
-                    <span style="color: #999;">${req.time}</span>
-                </div>
-            </div>
-        `;
-        marker.bindPopup(popupContent);
+        const popupRoot = document.createElement('div');
+        popupRoot.style.cssText = "text-align: center; font-family: 'Inter', sans-serif;";
+
+        const badge = document.createElement('div');
+        badge.style.cssText = `background: ${presentation.color}; color: white; padding: 4px 8px; border-radius: 999px; font-size: 0.68rem; font-weight: 700; display: inline-block; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.08em;`;
+        badge.textContent = presentation.label.toUpperCase() + ' REQUEST';
+
+        const title = document.createElement('div');
+        title.style.cssText = 'font-weight: 600; font-size: 0.95rem; margin-bottom: 4px;';
+        title.textContent = safeText(req.title, 'Assistance requested');
+
+        const location = document.createElement('div');
+        location.style.cssText = 'font-size: 0.8rem; color: #666;';
+        location.textContent = '\u{1F4CD} ' + safeText(req.location, 'Unknown');
+
+        const time = document.createElement('div');
+        time.style.cssText = 'font-size: 0.75rem; color: #999;';
+        time.textContent = safeText(req.time, 'Now');
+
+        popupRoot.appendChild(badge);
+        popupRoot.appendChild(title);
+        popupRoot.appendChild(location);
+        popupRoot.appendChild(time);
+
+        marker.bindPopup(popupRoot);
         markers.push({ marker, data: req });
-    });
-}
-
-
-
-// generateSOSCards function follows
-
-function generateSOSCards(container, countEl) {
-    if (!sosRequests) return;
-
-    // Convert to array if needed (already array in mock)
-    const requests = Array.isArray(sosRequests) ? sosRequests : [];
-
-    // Update Count
-    if (countEl) countEl.textContent = `${requests.length} active requests`;
-
-    // Sort by status (OPEN first)
-    requests.sort((a, b) => {
-        if (a.status === 'OPEN' && b.status !== 'OPEN') return -1;
-        if (a.status !== 'OPEN' && b.status === 'OPEN') return 1;
-        return 0;
-    });
-
-    requests.forEach(req => {
-        const card = document.createElement('div');
-        card.className = 'zone-card';
-        card.style.borderLeft = `4px solid ${req.type === 'FOOD' ? '#f59e0b' : req.type === 'MEDICAL' ? '#10b981' : '#ef4444'}`;
-
-        let statusBadge = req.status === 'OPEN'
-            ? '<span style="background: #ef4444; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.6rem;">OPEN</span>'
-            : '<span style="background: #f59e0b; color: black; padding: 2px 6px; border-radius: 4px; font-size: 0.6rem;">IN PROG</span>';
-
-        card.innerHTML = `
-            <div style="flex: 1;">
-                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 2px;">
-                    <span class="zone-name" style="font-size: 0.9rem;">${req.title}</span>
-                    ${statusBadge}
-                </div>
-                <div style="font-size: 0.75rem; color: #888; display: flex; align-items: center; gap: 6px;">
-                    <span>${req.type}</span> • <span>${req.timestamp}</span>
-                </div>
-            </div>
-        `;
-
-        card.addEventListener('click', () => {
-            map.flyTo([req.lat, req.lng], 16, { duration: 1 });
-            markers.forEach(m => {
-                if (m.data && m.data.id === req.id) {
-                    m.marker.openPopup();
-                }
-            });
-            // Switch to Simulator/Map tab
-            document.getElementById('tab-1').checked = true;
-            switchTab('simulator');
-        });
-
-        container.appendChild(card);
     });
 }
 
@@ -1941,10 +2064,10 @@ function toggleLegendBox() {
     if (legend) {
         legend.classList.toggle('collapsed');
         if (legend.classList.contains('collapsed')) {
-            // chevron.innerHTML = '◀'; 
+            // chevron.innerHTML = 'v'; 
             if (chevron) chevron.style.transform = 'rotate(-90deg)';
         } else {
-            // chevron.innerHTML = '▼';
+            // chevron.innerHTML = 'v';
             if (chevron) chevron.style.transform = 'rotate(0deg)';
         }
     }
@@ -1964,13 +2087,9 @@ function toggleCommunityLayer() {
     });
 
     if (btn) {
-        if (communityLayerVisible) {
-            btn.innerHTML = '👥 Hide';
-            btn.style.opacity = '1';
-        } else {
-            btn.innerHTML = '👥 Show';
-            btn.style.opacity = '0.7';
-        }
+        btn.innerHTML = communityLayerVisible ? '&#x1F465; Hide' : '&#x1F465; Show';
+        btn.style.opacity = communityLayerVisible ? '1' : '0.7';
+        btn.setAttribute('aria-pressed', communityLayerVisible ? 'true' : 'false');
     }
 }
 
@@ -1990,7 +2109,7 @@ function showSheltersOnMap() {
     shelters.forEach(s => {
         const icon = L.divIcon({
             className: 'shelter-marker',
-            html: `<div style="background: #10b981; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; border: 2px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.3); font-size: 16px;">🏠</div>`,
+            html: `<div style="background: #10b981; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; border: 2px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.3); font-size: 16px;">&#x1F3E0;</div>`,
             iconSize: [32, 32]
         });
 
@@ -2040,7 +2159,7 @@ function showSheltersToggle() {
 
         if (btn) {
             btn.classList.remove('active');
-            btn.innerHTML = '<span>🏠</span> Find Shelters';
+            btn.innerHTML = '<span>&#x1F3E0;</span> Find Shelters';
             btn.style.background = '';
         }
         return;
@@ -2061,7 +2180,7 @@ function showSheltersToggle() {
     shelters.forEach(s => {
         const icon = L.divIcon({
             className: 'shelter-marker',
-            html: `<div style="background: #10b981; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; border: 2px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.3); font-size: 16px;">🏠</div>`,
+            html: `<div style="background: #10b981; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; border: 2px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.3); font-size: 16px;">&#x1F3E0;</div>`,
             iconSize: [32, 32]
         });
 
@@ -2100,8 +2219,10 @@ function showSheltersToggle() {
     // Update Button
     if (btn) {
         btn.classList.add('active');
-        btn.innerHTML = '<span>❌</span> Hide Shelters';
+        btn.innerHTML = '<span>&#10060;</span> Hide Shelters';
         btn.style.background = 'rgba(16, 185, 129, 0.2)';
         sheltersVisible = true;
     }
 }
+
+

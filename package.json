@@ -5,7 +5,10 @@
     "main": "index.js",
     "scripts": {
         "build": "node build.js",
-        "test": "echo \"Error: no test specified\" && exit 1"
+        "check": "node build.js --check",
+        "verify:dist": "node build.js --verify",
+        "test": "npm run check",
+        "serve:dist": "npx serve dist"
     },
     "keywords": [
         "flood",
