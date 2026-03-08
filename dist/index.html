@@ -36,7 +36,7 @@
     <meta name="msapplication-TileColor" content="#0a0a0a">
 
     <!-- PWA / Android Assets -->
-    <link rel="manifest" href="./manifest.json?v=v1.0.0-daf3fac8">
+    <link rel="manifest" href="./manifest.json?v=v1.0.0-94f72290">
     <link rel="icon" type="image/png" href="./social-preview.png">
 
     <!-- Leaflet CSS -->
@@ -72,7 +72,7 @@
 
     <!-- NUCLEAR CACHE BUSTER SCRIPT (Force Update) -->
     <script>
-        const CURRENT_VERSION = 'v1.0.0-daf3fac8';
+        const CURRENT_VERSION = 'v1.0.0-94f72290';
         const lastVersion = localStorage.getItem('app_version');
 
         if (lastVersion !== CURRENT_VERSION) {
@@ -348,15 +348,15 @@
 
     <!-- Scripts -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="data.js?v=v1.0.0-daf3fac8"></script>
-    <script src="translations.js?v=v1.0.0-daf3fac8"></script>
-    <script src="app.js?v=v1.0.0-daf3fac8"></script>
+    <script src="data.js?v=v1.0.0-94f72290"></script>
+    <script src="translations.js?v=v1.0.0-94f72290"></script>
+    <script src="app.js?v=v1.0.0-94f72290"></script>
     <script>
         // Service Worker Registration (Progressive Web App)
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 // Use relative path for Android WebView compatibility
-                navigator.serviceWorker.register('./sw.js?v=v1.0.0-daf3fac8')
+                navigator.serviceWorker.register('./sw.js?v=v1.0.0-94f72290')
                     .then((registration) => {
                         console.log('Service worker registered:', registration.scope);
 

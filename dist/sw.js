@@ -1,7 +1,7 @@
 ﻿// Vadodara Flood Archives - Service Worker
 // Provides offline functionality and controlled caching
 
-const CACHE_VERSION = 'v1.0.0-daf3fac8';
+const CACHE_VERSION = 'v1.0.0-94f72290';
 const CACHE_NAME = `flood-archives-${CACHE_VERSION}`;
 const MAP_TILE_CACHE = `map-tiles-${CACHE_VERSION}`;
 const MAX_TILE_CACHE = 50;
@@ -9,11 +9,11 @@ const MAX_TILE_CACHE = 50;
 const STATIC_ASSETS = [
     '/',
     './index.html',
-    './style.css?v=v1.0.0-daf3fac8',
-    './app.js?v=v1.0.0-daf3fac8',
-    './data.js?v=v1.0.0-daf3fac8',
-    './translations.js?v=v1.0.0-daf3fac8',
-    './manifest.json?v=v1.0.0-daf3fac8',
+    './style.css?v=v1.0.0-94f72290',
+    './app.js?v=v1.0.0-94f72290',
+    './data.js?v=v1.0.0-94f72290',
+    './translations.js?v=v1.0.0-94f72290',
+    './manifest.json?v=v1.0.0-94f72290',
     './social-preview.png'
 ];
 
