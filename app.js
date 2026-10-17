@@ -471,9 +471,9 @@ function initializeMap() {
     mapInitialized = true;
 
     // Base Layer Options
-    const darkLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    // CARTO basemaps need an API key since Sep 2026 (keyless tiles come back watermarked)
+    const darkLayer = L.tileLayer('https://basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}{r}.png?key=cb1_4nbp_1_d9073f91105a4d1465fddcdb', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-        subdomains: 'abcd',
         maxZoom: 20
     });
 
